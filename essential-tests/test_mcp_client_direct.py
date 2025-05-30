@@ -11,7 +11,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 async def test_smact_mcp_direct():
     """Test SMACT MCP server using direct MCP client."""
     
-    print("🔍 Testing SMACT MCP Server with Direct Client...")
+    print("Testing Testing SMACT MCP Server with Direct Client...")
     print("=" * 60)
     
     smact_path = Path(__file__).parent / "smact-mcp-server"
@@ -24,22 +24,22 @@ async def test_smact_mcp_direct():
             cwd=str(smact_path)
         )
         
-        print("🔄 Connecting to SMACT MCP server...")
+        print("Connecting Connecting to SMACT MCP server...")
         async with stdio_client(server_params) as (read, write):
-            print("✅ Connected to server!")
+            print("SUCCESS Connected to server!")
             
             async with ClientSession(read, write) as session:
-                print("🔧 Initializing session...")
+                print("Initializing Initializing session...")
                 await session.initialize()
-                print("✅ Session initialized!")
+                print("SUCCESS Session initialized!")
                 
                 # List available tools
-                print("\n📋 Listing tools...")
+                print("\nListing Listing tools...")
                 tools = await session.list_tools()
-                print(f"   📊 Number of tools: {len(tools.tools)}")
+                print(f"   Number Number of tools: {len(tools.tools)}")
                 
                 if tools.tools:
-                    print("\n🛠️ Available tools:")
+                    print("\nAvailable Available tools:")
                     for i, tool in enumerate(tools.tools, 1):
                         print(f"  {i}. {tool.name}")
                         print(f"     Description: {tool.description}")
@@ -48,30 +48,30 @@ async def test_smact_mcp_direct():
                     
                     # Test calling the first tool
                     first_tool = tools.tools[0]
-                    print(f"🎯 Testing tool call: {first_tool.name}")
+                    print(f"Testing Testing tool call: {first_tool.name}")
                     
                     if first_tool.name == "check_smact_validity":
                         result = await session.call_tool(
                             "check_smact_validity", 
                             {"composition": "NaCl"}
                         )
-                        print(f"   ✅ Tool result: {result}")
+                        print(f"   SUCCESS Tool result: {result}")
                     elif first_tool.name == "parse_chemical_formula":
                         result = await session.call_tool(
                             "parse_chemical_formula",
                             {"formula": "H2O"}
                         )
-                        print(f"   ✅ Tool result: {result}")
+                        print(f"   SUCCESS Tool result: {result}")
                     else:
                         print(f"   ⏭️ Skipping unknown tool: {first_tool.name}")
                         
                 else:
-                    print("❌ No tools available!")
+                    print("ERROR No tools available!")
                     
-                print("\n✅ Direct MCP client test completed!")
+                print("\nSUCCESS Direct MCP client test completed!")
                 
     except Exception as e:
-        print(f"❌ Direct MCP client error: {e}")
+        print(f"ERROR Direct MCP client error: {e}")
         import traceback
         traceback.print_exc()
 

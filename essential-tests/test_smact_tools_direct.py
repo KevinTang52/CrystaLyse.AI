@@ -16,7 +16,7 @@ from agents.model_settings import ModelSettings
 async def test_direct_smact_tools():
     """Test direct SMACT tool calling."""
     
-    print("🔬 Testing Direct SMACT Tool Usage...")
+    print("Testing Testing Direct SMACT Tool Usage...")
     print("=" * 50)
     
     # Set up path to SMACT MCP server
@@ -32,7 +32,7 @@ async def test_direct_smact_tools():
                 "cwd": str(smact_path)
             }
         ) as smact_server:
-            print("✅ MCP Server connection established!")
+            print("SUCCESS MCP Server connection established!")
             
             # Create test agent with explicit tool forcing
             agent = Agent(
@@ -55,10 +55,10 @@ async def test_direct_smact_tools():
                 mcp_servers=[smact_server],
             )
             
-            print("✅ Agent created with MCP server!")
+            print("SUCCESS Agent created with MCP server!")
             
             # Test 1: Force composition validation tool usage
-            print("\n🧪 Test 1: Forcing SMACT validity check...")
+            print("\nRunning Test 1: Forcing SMACT validity check...")
             test_query1 = """Use the check_smact_validity tool to validate the composition "NaCl". 
             I want to see the actual SMACT validation results, not general knowledge."""
             
@@ -71,7 +71,7 @@ async def test_direct_smact_tools():
             print(response1.final_output)
             
             # Test 2: Force formula parsing
-            print("\n🔬 Test 2: Forcing SMACT formula parsing...")
+            print("\nTesting Test 2: Forcing SMACT formula parsing...")
             test_query2 = """Use the parse_chemical_formula tool to parse "LiFePO4". 
             I need the actual SMACT parsing output with element counts."""
             
@@ -80,7 +80,7 @@ async def test_direct_smact_tools():
                 input=test_query2
             )
             
-            print("📊 SMACT Formula Parsing Results:")
+            print("Results SMACT Formula Parsing Results:")
             print(response2.final_output)
             
             # Test 3: Force element info lookup
@@ -109,10 +109,10 @@ async def test_direct_smact_tools():
             print("🔋 SMACT Neutral Ratios Results:")
             print(response4.final_output)
             
-            print("\n✅ All direct SMACT tool tests completed!")
+            print("\nSUCCESS All direct SMACT tool tests completed!")
             
     except Exception as e:
-        print(f"❌ Test Error: {e}")
+        print(f"ERROR Test Error: {e}")
         raise
 
 
@@ -122,7 +122,7 @@ async def main():
         await test_direct_smact_tools()
         print("\n🎉 SMACT MCP tools are working correctly!")
     except Exception as e:
-        print(f"\n💥 Test failed with error: {e}")
+        print(f"\nERROR Test failed with error: {e}")
         import traceback
         traceback.print_exc()
 

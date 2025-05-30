@@ -17,17 +17,17 @@ from crystalyse import CrystaLyseAgent
 
 async def test_basic_functionality():
     """Test basic agent functionality."""
-    print("🧪 Testing CrystaLyse Agent Deployment")
+    print("Running Testing CrystaLyse Agent Deployment")
     print("=" * 60)
     
     # Check API key
     api_key = os.getenv("OPENAI_MDG_API_KEY")
     if not api_key:
-        print("❌ Error: OPENAI_MDG_API_KEY not found!")
+        print("ERROR Error: OPENAI_MDG_API_KEY not found!")
         print("Please set the environment variable and try again.")
         return False
         
-    print("✅ API key found")
+    print("SUCCESS API key found")
     
     # Test OpenAI connection
     try:
@@ -38,9 +38,9 @@ async def test_basic_functionality():
             messages=[{"role": "user", "content": "Say 'API key verified'"}],
             max_tokens=10
         )
-        print(f"✅ OpenAI API connection verified: {response.choices[0].message.content}")
+        print(f"SUCCESS OpenAI API connection verified: {response.choices[0].message.content}")
     except Exception as e:
-        print(f"❌ OpenAI API error: {e}")
+        print(f"ERROR OpenAI API error: {e}")
         print("\nTrying with gpt-4o instead...")
         try:
             response = client.chat.completions.create(
@@ -48,10 +48,10 @@ async def test_basic_functionality():
                 messages=[{"role": "user", "content": "Say 'API key verified'"}],
                 max_tokens=10
             )
-            print(f"✅ OpenAI API connection verified with gpt-4o: {response.choices[0].message.content}")
+            print(f"SUCCESS OpenAI API connection verified with gpt-4o: {response.choices[0].message.content}")
             print("ℹ️  Note: gpt-4 is not accessible, using gpt-4o for testing")
         except Exception as e2:
-            print(f"❌ OpenAI API error with gpt-4o: {e2}")
+            print(f"ERROR OpenAI API error with gpt-4o: {e2}")
             return False
     
     # Initialize CrystaLyse agent
@@ -59,25 +59,25 @@ async def test_basic_functionality():
     try:
         # Use gpt-4o if gpt-4 is not available
         agent = CrystaLyseAgent(model="gpt-4o", temperature=0.7)
-        print("✅ Agent initialized successfully")
+        print("SUCCESS Agent initialized successfully")
     except Exception as e:
-        print(f"❌ Agent initialization error: {e}")
+        print(f"ERROR Agent initialization error: {e}")
         return False
     
     # Test with a simple query
-    print("\n🔬 Running test query...")
+    print("\nTesting Running test query...")
     test_query = "Suggest a simple oxide material for photocatalysis"
     print(f"Query: {test_query}")
     print("-" * 60)
     
     try:
         result = await agent.analyze(test_query)
-        print("\n📊 Result received:")
+        print("\nResults Result received:")
         print(result[:500] + "..." if len(result) > 500 else result)
-        print("\n✅ Test query completed successfully!")
+        print("\nSUCCESS Test query completed successfully!")
         return True
     except Exception as e:
-        print(f"\n❌ Test query error: {e}")
+        print(f"\nERROR Test query error: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -99,15 +99,15 @@ async def test_streaming():
             if event.type == "text":
                 chunk_count += 1
                 if chunk_count == 1:
-                    print("✅ Streaming started...")
+                    print("SUCCESS Streaming started...")
                 # Print first few chunks
                 if chunk_count <= 3:
                     print(f"  Chunk {chunk_count}: {event.data.get('text', '')[:50]}...")
                     
-        print(f"\n✅ Streaming completed with {chunk_count} chunks")
+        print(f"\nSUCCESS Streaming completed with {chunk_count} chunks")
         return True
     except Exception as e:
-        print(f"\n❌ Streaming test error: {e}")
+        print(f"\nERROR Streaming test error: {e}")
         return False
 
 
@@ -124,17 +124,17 @@ async def main():
     # Summary
     print("\n\n📋 Test Summary")
     print("=" * 60)
-    print(f"Basic functionality: {'✅ PASSED' if basic_ok else '❌ FAILED'}")
-    print(f"Streaming: {'✅ PASSED' if streaming_ok else '❌ FAILED'}")
+    print(f"Basic functionality: {'SUCCESS PASSED' if basic_ok else 'ERROR FAILED'}")
+    print(f"Streaming: {'SUCCESS PASSED' if streaming_ok else 'ERROR FAILED'}")
     
     if basic_ok and streaming_ok:
-        print("\n✅ All tests passed! CrystaLyse is ready for deployment.")
+        print("\nSUCCESS All tests passed! CrystaLyse is ready for deployment.")
         print("\nNext steps:")
         print("1. Run example scripts: python examples/basic_analysis.py")
         print("2. Try CLI: crystalyse analyze 'your query here'")
         print("3. Run full test suite: pytest tests/ -v")
     else:
-        print("\n❌ Some tests failed. Please check the errors above.")
+        print("\nERROR Some tests failed. Please check the errors above.")
         print("\nCommon issues:")
         print("- Ensure OPENAI_MDG_API_KEY is set correctly")
         print("- Check if you have access to gpt-4 or use gpt-4o")

@@ -1,31 +1,33 @@
 # CrystaLyse.AI
 
-CrystaLyse is an autonomous materials discovery agent built on the OpenAI Agents Python SDK that leverages the Model Context Protocol (MCP) to integrate with materials science tools like SMACT. The agent follows a "propose-validate-revise" workflow where the LLM's chemical intuition drives discovery while tools provide validation and enrichment.
+CrystaLyse.AI is an autonomous materials discovery platform built on the OpenAI Agents Python SDK. It features a dual-mode system that seamlessly bridges creative AI-driven exploration with rigorous computational validation using SMACT (Semiconducting Materials from Analogy and Chemical Theory) tools via the Model Context Protocol (MCP).
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.11+ (recommended: conda environment)
 - OpenAI API key (set as `OPENAI_MDG_API_KEY` or `OPENAI_API_KEY`)
-- SMACT library (included in the repository)
+- SMACT library (integrated via MCP server)
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-cd /home/ryan/crystalyseai/CrystaLyse.AI
+git clone <repository-url>
+cd CrystaLyse.AI
 ```
 
-2. Create a virtual environment:
+2. Create conda environment (recommended):
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+conda create -n crystalyse python=3.11
+conda activate crystalyse
 ```
 
 3. Install dependencies:
 ```bash
 pip install -e .
+pip install -e ./smact-mcp-server
 ```
 
 4. Set your OpenAI API key:
@@ -177,14 +179,11 @@ graph TD
 CrystaLyse supports different OpenAI models:
 
 ```python
-# Use GPT-4 (default)
-agent = CrystaLyseAgent(model="gpt-4")
+# Use GPT-4.1 (default)
+agent = CrystaLyseAgent(model="gpt-4.1")
 
-# Use GPT-4 Turbo for faster responses
-agent = CrystaLyseAgent(model="gpt-4-turbo")
-
-# Use GPT-4o-mini for cost-effective testing
-agent = CrystaLyseAgent(model="gpt-4o-mini")
+# Use o4-mini for reasoned responses
+agent = CrystaLyseAgent(model="o4-mini")
 ```
 
 ### Temperature Control
@@ -297,7 +296,7 @@ for query in queries:
 
 1. **Use Streaming** for better user experience:
    ```bash
-   crystalyse analyze "your query" --stream
+   crystalyse analyze "your query" --stream 
    ```
 
 2. **Cache Results** when testing the same queries repeatedly
@@ -308,7 +307,7 @@ for query in queries:
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines - this is a placeholder.
 
 ## 📝 License
 

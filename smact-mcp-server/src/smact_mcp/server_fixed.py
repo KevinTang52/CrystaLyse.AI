@@ -20,7 +20,7 @@ def main():
     @app.list_tools()
     async def list_tools() -> list[types.Tool]:
         """List all available SMACT tools."""
-        print("🔧 SMACT list_tools() called!")
+        print("DEBUG SMACT list_tools() called!")
         
         return [
             types.Tool(
@@ -90,7 +90,7 @@ def main():
     @app.call_tool()
     async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         """Handle tool calls."""
-        print(f"🎯 SMACT call_tool() called with: {name}, {arguments}")
+        print(f"DEBUG SMACT call_tool() called with: {name}, {arguments}")
         
         try:
             if name == "check_smact_validity":
@@ -121,7 +121,7 @@ def main():
     from mcp.server.stdio import stdio_server
 
     async def arun():
-        print("🚀 Starting SMACT MCP server...")
+        print("Starting SMACT MCP server...")
         async with stdio_server() as streams:
             await app.run(
                 streams[0], streams[1], app.create_initialization_options()

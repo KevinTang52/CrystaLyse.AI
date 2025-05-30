@@ -1,4 +1,41 @@
-"""Command-line interface for CrystaLyse."""
+"""
+Command-line interface for CrystaLyse.AI materials discovery platform.
+
+This module provides a comprehensive CLI for CrystaLyse.AI, enabling users to perform
+materials discovery tasks from the command line with rich formatting and interactive
+features. The CLI supports both streaming and non-streaming analysis, result formatting,
+and various output options.
+
+Key Features:
+    - Rich terminal output with formatted tables and panels
+    - Streaming analysis with real-time progress display
+    - JSON output export for integration with other tools
+    - Example queries for quick start and demonstration
+    - Built-in SMACT MCP server management for testing
+
+Commands:
+    analyze: Perform materials discovery analysis on user queries
+    examples: Display example queries for reference
+    server: Start SMACT MCP server for testing and development
+
+Dependencies:
+    - click: Command-line interface framework
+    - rich: Rich text and beautiful formatting in terminal
+    - asyncio: Asynchronous I/O support for agent integration
+
+Example Usage:
+    Basic analysis:
+        $ crystalyse analyze "Design a battery cathode material"
+    
+    Streaming analysis with custom model:
+        $ crystalyse analyze "Find multiferroic materials" --model gpt-4o --stream
+    
+    Save results to file:
+        $ crystalyse analyze "Photovoltaic semiconductors" -o results.json
+    
+    View example queries:
+        $ crystalyse examples
+"""
 
 import asyncio
 import click
@@ -28,12 +65,55 @@ def cli():
 @click.option("--output", "-o", help="Output file for results (JSON)")
 @click.option("--stream", is_flag=True, help="Enable streaming output")
 def analyze(query: str, model: str, temperature: float, output: str, stream: bool):
-    """Analyze a materials discovery query."""
+    """
+    Analyze a materials discovery query using CrystaLyse.AI.
+    
+    This command performs comprehensive materials discovery analysis on user queries,
+    supporting both creative exploration and rigorous validation modes. Results are
+    displayed with rich formatting and can be exported to JSON for further processing.
+    
+    Args:
+        query (str): The materials discovery request. Should clearly specify the target
+            application, desired properties, and any constraints.
+        model (str): The OpenAI language model to use (default: gpt-4)
+        temperature (float): Controls creativity vs precision (0.0-1.0, default: 0.7)
+        output (str): Optional output file path for saving results in JSON format
+        stream (bool): Enable real-time streaming output (default: False)
+    
+    Examples:
+        Basic analysis:
+            crystalyse analyze "Design a cathode for Na-ion batteries"
+        
+        High-precision analysis:
+            crystalyse analyze "Find Pb-free ferroelectrics" --temperature 0.3
+        
+        Streaming with file output:
+            crystalyse analyze "Solar cell materials" --stream -o results.json
+    """
     asyncio.run(_analyze(query, model, temperature, output, stream))
 
 
 async def _analyze(query: str, model: str, temperature: float, output: str, stream: bool):
-    """Async implementation of analyze command."""
+    """
+    Asynchronous implementation of the analyze command.
+    
+    Handles the core logic for materials discovery analysis including agent initialization,
+    query processing, result formatting, and file output. Supports both streaming and
+    non-streaming modes with comprehensive error handling and user feedback.
+    
+    Args:
+        query (str): Materials discovery query from user
+        model (str): OpenAI model name to use for analysis
+        temperature (float): Temperature setting for generation control
+        output (str): Optional file path for saving results
+        stream (bool): Whether to enable streaming output mode
+    
+    Returns:
+        None: Results are displayed to console and optionally saved to file
+        
+    Raises:
+        SystemExit: If API key is not found or agent initialization fails
+    """
     # Check for API key
     api_key = os.getenv("OPENAI_MDG_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:

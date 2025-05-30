@@ -1,4 +1,40 @@
-"""Composition generation and validation tools."""
+"""
+Composition generation and validation tools for materials discovery.
+
+This module provides a comprehensive set of tools for generating, validating, and
+analyzing chemical compositions in materials discovery workflows. It implements
+intelligent composition generation based on structural constraints, validation
+against established chemical rules, and override mechanisms for special cases.
+
+Key Features:
+    - Structure-aware composition generation (perovskite, spinel, etc.)
+    - Batch validation with detailed chemical analysis
+    - Override eligibility assessment for SMACT-invalid compositions
+    - Chemical reasoning and justification for composition decisions
+    - Integration with SMACT validation via MCP protocols
+
+Functions:
+    generate_compositions: Generate candidate compositions from element sets
+    validate_composition_batch: Validate multiple compositions with context
+    check_override_eligibility: Assess viability of invalid compositions
+    explain_chemical_reasoning: Provide detailed chemical justifications
+
+Dependencies:
+    - agents: Function tool decorators for OpenAI Agents integration
+    - utils: Chemical classification and analysis utilities
+    - json: Structured data serialization for results
+
+Example:
+    Basic composition generation:
+    
+    >>> import asyncio
+    >>> from crystalyse.tools.composition_tools import generate_compositions
+    >>> 
+    >>> elements = ["Li", "Fe", "P", "O"]
+    >>> constraints = {"structure_type": "olivine"}
+    >>> result = await generate_compositions(elements, constraints, 5)
+    >>> print(result)
+"""
 
 import json
 from typing import List, Optional
@@ -19,12 +55,60 @@ async def generate_compositions(
     target_count: int = 10
 ) -> str:
     """
-    Generate candidate compositions from elements with constraints.
+    Generate candidate chemical compositions from element sets with structural constraints.
+    
+    This function implements intelligent composition generation that considers crystal
+    structure types, chemical bonding principles, and user-specified constraints to
+    produce chemically reasonable candidate materials. The generation process adapts
+    its strategy based on target structure types and follows established stoichiometric
+    patterns for different crystal families.
+    
+    Generation Strategies:
+        - Perovskite (ABX₃): Generates A-site/B-site cation combinations with anions
+        - Spinel (AB₂X₄): Creates normal and inverse spinel compositions
+        - General: Produces binary, ternary, and quaternary combinations
+        - Structure-agnostic: Uses electronegativity and size considerations
     
     Args:
-        elements: List of elements to consider
-        constraints: Dict with keys like 'exclude_elements', 'oxidation_states', etc.
-        target_count: Number of candidates to generate
+        elements (List[str]): List of chemical element symbols to consider for
+            composition generation. Should include both cations and anions for
+            ionic compounds. Example: ["Li", "Fe", "P", "O"]
+        constraints (dict): Dictionary specifying generation constraints and preferences:
+            - "structure_type": Target crystal structure ("perovskite", "spinel", etc.)
+            - "exclude_elements": Elements to avoid in compositions
+            - "oxidation_states": Preferred oxidation state ranges
+            - "electronegativity_range": Allowed electronegativity differences
+            - "application": Target application for context-aware generation
+        target_count (int, optional): Maximum number of candidate compositions to
+            generate. Defaults to 10. Actual count may be less if constraints are
+            very restrictive.
+    
+    Returns:
+        str: JSON-formatted string containing:
+            - "candidates": List of composition dictionaries with formula, structure
+              type, novelty score, and chemical justification
+            - "total_generated": Number of compositions actually generated
+            - "element_space": Input element list for reference
+            - "constraints": Applied constraints for transparency
+    
+    Example:
+        Battery cathode material generation:
+        
+        >>> elements = ["Li", "Fe", "Mn", "P", "O"]
+        >>> constraints = {
+        ...     "structure_type": "olivine",
+        ...     "application": "battery_cathode",
+        ...     "exclude_elements": ["Co"]  # Cost considerations
+        ... }
+        >>> result = await generate_compositions(elements, constraints, 5)
+        >>> compositions = json.loads(result)
+        >>> for comp in compositions["candidates"]:
+        ...     print(f"{comp['formula']}: {comp['chemical_justification']}")
+    
+    Note:
+        The function implements heuristic composition generation and should be
+        followed by rigorous validation using SMACT tools for experimental work.
+        Generated compositions are ranked by novelty score and chemical plausibility.
     """
     candidates = []
     
