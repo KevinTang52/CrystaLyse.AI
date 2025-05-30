@@ -8,8 +8,8 @@ CrystaLyse.AI is an autonomous materials discovery platform built on the OpenAI 
 
 - Python 3.11+ (recommended: conda environment)
 - OpenAI API key (set as `OPENAI_MDG_API_KEY` or `OPENAI_API_KEY`)
-- SMACT library - for heuristics based screening (integrated via MCP server)
-- Chemeleon-DNG - for 3D crystal structure generation (integrated via MCP Server)
+- SMACT library - heuristics based screening (integrated via MCP server)
+- Chemeleon-DNG - 3D Crystal Structure Exploration and Generation (integrated via MCP Server)
 
 ### Installation
 
@@ -33,7 +33,7 @@ pip install -e ./smact-mcp-server
 
 4. Set your OpenAI API key:
 ```bash
-export OPENAI_MDG_API_KEY="your-api-key-here"
+export OPENAI_API_KEY="your-api-key-here"
 ```
 
 ### Basic Usage
@@ -278,7 +278,7 @@ for query in queries:
 ### Common Issues
 
 1. **API Key Not Found**
-   - Ensure `OPENAI_MDG_API_KEY` or `OPENAI_API_KEY` is set
+   - Ensure `OPENAI_API_KEY` is set
    - Check the key is valid and has appropriate permissions
 
 2. **SMACT MCP Server Connection Failed**
@@ -321,6 +321,6 @@ Special thanks to Aron Walsh and Hyunsoo Park for supervising, advising and guid
 And lots of thanks to the teams and community developers who helped build:
 
 - SMACT library for materials science tools
-- CHEMELEON library for 3D Structure generation
+- Chemeleon library for 3D Crystal Structure Exploration and Generation packages
 - OpenAI Agents SDK for the agent framework
 - Model Context Protocol for tool integration 
