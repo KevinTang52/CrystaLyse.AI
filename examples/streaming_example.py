@@ -46,7 +46,7 @@ async def main():
         elif event.type == "tool_result":
             # Tool completion
             if current_tool:
-                print(f" [✓ {current_tool} complete]")
+                print(f" [ {current_tool} complete]")
                 current_tool = None
                 
         elif event.type == "error":
@@ -54,7 +54,7 @@ async def main():
             print(f"\n[Error: {event.data}]")
             
     print("\n\n" + "="*80)
-    print("✅ Streaming complete!")
+    print("Streaming complete!")
 
 
 if __name__ == "__main__":

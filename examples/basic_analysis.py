@@ -46,7 +46,7 @@ async def main():
         if i < len(queries):
             await asyncio.sleep(2)
             
-    print("\n✅ Examples completed!")
+    print("\nExamples completed!")
 
 
 if __name__ == "__main__":

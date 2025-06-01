@@ -95,7 +95,7 @@ async def main():
     with open("advanced_results.json", "w") as f:
         json.dump(results, f, indent=2)
         
-    print("\n✅ Results saved to advanced_results.json")
+    print("\nResults saved to advanced_results.json")
 
 
 if __name__ == "__main__":

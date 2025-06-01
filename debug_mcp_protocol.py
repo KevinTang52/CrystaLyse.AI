@@ -14,7 +14,7 @@ from agents.mcp import MCPServerStdio
 async def debug_mcp_protocol():
     """Debug MCP protocol directly."""
     
-    print("🔍 Debugging MCP Protocol Communication...")
+    print("Debugging MCP Protocol Communication...")
     print("=" * 60)
     
     # Set up path to SMACT MCP server
@@ -32,28 +32,28 @@ async def debug_mcp_protocol():
             cache_tools_list=False,
             client_session_timeout_seconds=10
         ) as smact_server:
-            print("✅ MCP Server connection established!")
-            print(f"📋 Server name: {smact_server.name}")
+            print("MCP Server connection established!")
+            print(f"Server name: {smact_server.name}")
             
             # Test direct tool listing
-            print("\n🔧 Calling list_tools() directly on MCP server...")
+            print("\nCalling list_tools() directly on MCP server...")
             tools = await smact_server.list_tools()
             
-            print(f"📊 Number of tools returned: {len(tools)}")
+            print(f"Number of tools returned: {len(tools)}")
             
             if tools:
-                print("\n🛠️ Available tools:")
+                print("\nAvailable tools:")
                 for i, tool in enumerate(tools, 1):
                     print(f"  {i}. {tool.name}")
                     print(f"     Description: {tool.description}")
                     print(f"     Schema: {tool.inputSchema}")
                     print()
             else:
-                print("❌ No tools returned from MCP server!")
+                print("No tools returned from MCP server!")
                 
             # Test a specific tool call if tools are available
             if tools:
-                print("🎯 Testing direct tool call...")
+                print("Testing direct tool call...")
                 first_tool = tools[0]
                 print(f"   Calling tool: {first_tool.name}")
                 
@@ -64,17 +64,17 @@ async def debug_mcp_protocol():
                             tool_name="check_smact_validity",
                             arguments={"composition": "NaCl"}
                         )
-                        print(f"   ✅ Tool call result: {result}")
+                        print(f"   Tool call result: {result}")
                     else:
-                        print(f"   ⏭️ Skipping call for tool: {first_tool.name}")
+                        print(f"   Skipping call for tool: {first_tool.name}")
                         
                 except Exception as e:
-                    print(f"   ❌ Tool call failed: {e}")
+                    print(f"   Tool call failed: {e}")
             
-            print("\n✅ MCP protocol debug completed!")
+            print("\nMCP protocol debug completed!")
             
     except Exception as e:
-        print(f"❌ MCP Protocol Error: {e}")
+        print(f"MCP Protocol Error: {e}")
         import traceback
         traceback.print_exc()
 
@@ -83,9 +83,9 @@ async def main():
     """Main debug function."""
     try:
         await debug_mcp_protocol()
-        print("\n🎉 MCP protocol debug completed!")
+        print("\nMCP protocol debug completed!")
     except Exception as e:
-        print(f"\n💥 Debug failed with error: {e}")
+        print(f"\nDebug failed with error: {e}")
 
 
 if __name__ == "__main__":

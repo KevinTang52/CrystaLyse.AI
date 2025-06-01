@@ -16,7 +16,7 @@ from agents.model_settings import ModelSettings
 async def debug_mcp_tools():
     """Debug MCP tool availability."""
     
-    print("🔍 Debugging MCP Tool Availability...")
+    print("Debugging MCP Tool Availability...")
     print("=" * 50)
     
     # Set up path to SMACT MCP server
@@ -32,7 +32,7 @@ async def debug_mcp_tools():
                 "cwd": str(smact_path)
             }
         ) as smact_server:
-            print("✅ MCP Server connection established!")
+            print("MCP Server connection established!")
             
             # Create minimal agent
             agent = Agent(
@@ -44,34 +44,34 @@ async def debug_mcp_tools():
                 mcp_servers=[smact_server],
             )
             
-            print("✅ Agent created!")
+            print("Agent created!")
             
             # Test 1: List available tools
-            print("\n🔧 Asking agent to list all available tools...")
+            print("\nAsking agent to list all available tools...")
             
             response1 = await Runner.run(
                 starting_agent=agent,
                 input="What tools do you have available? List them all with their descriptions."
             )
             
-            print("📋 Available tools response:")
+            print("Available tools response:")
             print(response1.final_output)
             
             # Test 2: Force one specific tool call
-            print("\n🎯 Forcing specific tool call...")
+            print("\nForcing specific tool call...")
             
             response2 = await Runner.run(
                 starting_agent=agent,
                 input='Call the check_smact_validity tool RIGHT NOW with the argument "H2O". Do not explain, just call it.'
             )
             
-            print("🔧 Tool call response:")
+            print("Tool call response:")
             print(response2.final_output)
             
-            print("\n✅ Debug tests completed!")
+            print("\nDebug tests completed!")
             
     except Exception as e:
-        print(f"❌ Debug Error: {e}")
+        print(f"Debug Error: {e}")
         import traceback
         traceback.print_exc()
 
@@ -80,9 +80,9 @@ async def main():
     """Main debug function."""
     try:
         await debug_mcp_tools()
-        print("\n🎉 Debug completed!")
+        print("\nDebug completed!")
     except Exception as e:
-        print(f"\n💥 Debug failed with error: {e}")
+        print(f"\nDebug failed with error: {e}")
 
 
 if __name__ == "__main__":
