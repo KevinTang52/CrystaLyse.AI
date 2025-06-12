@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Test Chemeleon MCP server with OpenAI agents client."""
 
 import pytest

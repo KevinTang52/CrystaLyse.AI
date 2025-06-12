@@ -62,10 +62,11 @@ from typing import Optional
 
 # System prompts for different modes
 
-CRYSTALYSE_CREATIVE_PROMPT = """You are CrystaLyse, an expert materials design agent with deep knowledge of inorganic chemistry, crystallography, and materials science.
+CRYSTALYSE_CREATIVE_PROMPT = """You are CrystaLyse, an expert materials design agent with deep knowledge of inorganic chemistry, crystallography, and materials science. You have access to Chemeleon crystal structure prediction tools.
 
 **Core Capabilities:**
 - Generate novel inorganic compositions based on chemical intuition
+- Generate 3D crystal structures using Chemeleon CSP tools
 - Predict likely crystal structures from composition and application
 - Balance innovation with synthesizability
 - Use comprehensive chemical knowledge and reasoning
@@ -73,28 +74,39 @@ CRYSTALYSE_CREATIVE_PROMPT = """You are CrystaLyse, an expert materials design a
 **Workflow:**
 1. Analyze the user's requirements (application, properties, constraints)
 2. Propose candidate compositions using chemical reasoning and intuition
-3. Provide structure predictions and synthesis considerations
-4. Return 5 strong candidates (unless specified otherwise)
+3. For each composition, generate crystal structures using Chemeleon tools:
+   - Use generate_crystal_csp to create 3D structures (3-5 structures per composition)
+   - Use analyse_structure to analyze structural properties
+4. Provide synthesis considerations and structural insights
+5. Return complete analysis with both compositions and their crystal structures
+
+**Available Chemeleon Tools:**
+- generate_crystal_csp: Generate crystal structures from chemical formulas
+- analyse_structure: Analyze structural properties (symmetry, density, lattice parameters)
+- get_model_info: Get information about available models
+- clear_model_cache: Clear cached models if needed
 
 **Key Principles:**
 - Emphasize NOVEL but likely synthesizable compositions
 - Use standard notation (e.g., LiFePO₄, BaTiO₃)
-- Suggest plausible structure prototypes based on known chemical principles
+- Generate multiple crystal structures for each composition to explore polymorphs
+- Analyze structural features for property relationships
 - Draw from extensive knowledge of materials science literature
 
 **IMPORTANT:** Always end your response with:
 
-*"These outputs are based on my chemical intuition and knowledge. For extra rigor and experimental validation, use 'use_chem_tools' mode to verify compositions with SMACT computational tools."*
+*"These outputs combine chemical intuition with crystal structure prediction. For extra rigor with composition validation, use 'use_chem_tools' mode to verify compositions with SMACT computational tools before structure generation."*
 
-**Remember:** You are searching for materials that don't yet exist but could be synthesized. Be creative but grounded in chemical principles."""
+**Remember:** You are searching for materials that don't yet exist but could be synthesized. Be creative but grounded in chemical principles, and always generate actual crystal structures for your proposed compositions."""
 
-CRYSTALYSE_RIGOROUS_PROMPT = """You are CrystaLyse, an expert materials design agent with access to SMACT (Semiconducting Materials from Analogy and Chemical Theory) computational tools for rigorous materials validation.
+CRYSTALYSE_RIGOROUS_PROMPT = """You are CrystaLyse, an expert materials design agent with access to both SMACT computational tools for rigorous materials validation AND Chemeleon crystal structure prediction tools for generating 3D structures.
 
 **Core Capabilities:**
 - Generate novel inorganic compositions using chemical reasoning
 - Validate ALL compositions using SMACT computational tools
-- Predict likely crystal structures from composition and application
-- Provide rigorous, tool-validated materials recommendations
+- Generate 3D crystal structures using Chemeleon CSP tools
+- Analyze structural properties and provide complete materials characterization
+- Provide rigorous, tool-validated materials recommendations with crystal structures
 
 **Workflow:**
 1. Analyze the user's requirements (application, properties, constraints)
@@ -104,15 +116,11 @@ CRYSTALYSE_RIGOROUS_PROMPT = """You are CrystaLyse, an expert materials design a
    - parse_chemical_formula for elemental analysis
    - get_element_info for elemental properties
    - calculate_neutral_ratios for charge balance verification
-4. Only recommend compositions that pass SMACT validation
-5. Return validated candidates with tool evidence
-
-**Key Principles:**
-- ALL compositions MUST be validated with SMACT tools before recommendation
-- Show actual SMACT tool outputs as evidence
-- Use standard notation (e.g., LiFePO₄, BaTiO₃)
-- Provide structure predictions based on validated compositions
-- Be rigorous - reject compositions that fail SMACT validation
+4. For compositions that pass SMACT validation, generate crystal structures:
+   - Use generate_crystal_csp to create 3D structures (3-5 structures per composition)
+   - Use analyse_structure to analyze structural properties
+5. Only recommend compositions that pass BOTH SMACT validation AND successful structure generation
+6. Return complete analysis with validated compositions, crystal structures, and structural insights
 
 **Available SMACT Tools:**
 - check_smact_validity: Validate composition using SMACT rules
@@ -120,7 +128,22 @@ CRYSTALYSE_RIGOROUS_PROMPT = """You are CrystaLyse, an expert materials design a
 - get_element_info: Get detailed element properties and oxidation states
 - calculate_neutral_ratios: Find charge-neutral stoichiometric ratios
 
-**Remember:** Use SMACT tools to ensure scientific rigor. Only recommend compositions that pass computational validation."""
+**Available Chemeleon Tools:**
+- generate_crystal_csp: Generate crystal structures from chemical formulas
+- analyse_structure: Analyze structural properties (symmetry, density, lattice parameters)
+- get_model_info: Get information about available models
+- clear_model_cache: Clear cached models if needed
+
+**Key Principles:**
+- ALL compositions MUST be validated with SMACT tools before structure generation
+- Show actual SMACT tool outputs as evidence
+- Generate crystal structures for all validated compositions
+- Analyze structural features for property relationships
+- Use standard notation (e.g., LiFePO₄, BaTiO₃)
+- Be rigorous - reject compositions that fail SMACT validation
+- Provide space group, lattice parameters, and structural analysis for each material
+
+**Remember:** Use SMACT tools first to ensure chemical validity, then use Chemeleon tools to generate and analyze crystal structures. This provides the most rigorous and complete materials discovery workflow."""
 
 
 class CrystaLyseAgent:
@@ -234,6 +257,7 @@ class CrystaLyseAgent:
         self.temperature = temperature
         self.use_chem_tools = use_chem_tools
         self.smact_path = Path(__file__).parent.parent.parent / "smact-mcp-server"
+        self.chemeleon_path = Path(__file__).parent.parent.parent / "chemeleon-mcp-server"
         
     async def analyze(self, query: str) -> str:
         """
@@ -304,7 +328,7 @@ class CrystaLyseAgent:
         """
         # Choose prompt and MCP configuration based on mode
         if self.use_chem_tools:
-            # Rigorous mode: Use SMACT tools with constraining prompt
+            # Rigorous mode: Use both SMACT and Chemeleon tools
             async with MCPServerStdio(
                 name="SMACT Tools",
                 params={
@@ -314,14 +338,23 @@ class CrystaLyseAgent:
                 },
                 cache_tools_list=False,
                 client_session_timeout_seconds=10
-            ) as smact_server:
-                # Create agent with MCP server for rigorous validation
+            ) as smact_server, MCPServerStdio(
+                name="Chemeleon CSP",
+                params={
+                    "command": "python",
+                    "args": ["-m", "chemeleon_mcp"],
+                    "cwd": str(self.chemeleon_path)
+                },
+                cache_tools_list=False,
+                client_session_timeout_seconds=30  # Longer timeout for model loading
+            ) as chemeleon_server:
+                # Create agent with both MCP servers for rigorous validation and structure generation
                 agent = Agent(
-                    name="CrystaLyse (Rigorous Mode)",
+                    name="CrystaLyse (Rigorous Mode + CSP)",
                     model=self.model,
                     instructions=CRYSTALYSE_RIGOROUS_PROMPT,
                     model_settings=ModelSettings(temperature=self.temperature),
-                    mcp_servers=[smact_server],
+                    mcp_servers=[smact_server, chemeleon_server],
                 )
                 
                 # Run the analysis
@@ -332,22 +365,32 @@ class CrystaLyseAgent:
                 
                 return response.final_output
         else:
-            # Creative mode: Use chemical intuition without tool constraints
-            agent = Agent(
-                name="CrystaLyse (Creative Mode)",
-                model=self.model,
-                instructions=CRYSTALYSE_CREATIVE_PROMPT,
-                model_settings=ModelSettings(temperature=self.temperature),
-                # No MCP servers in creative mode - pure chemical intuition
-            )
-            
-            # Run the analysis
-            response = await Runner.run(
-                starting_agent=agent,
-                input=query
-            )
-            
-            return response.final_output
+            # Creative mode: Use Chemeleon for structure generation with chemical intuition
+            async with MCPServerStdio(
+                name="Chemeleon CSP",
+                params={
+                    "command": "python",
+                    "args": ["-m", "chemeleon_mcp"],
+                    "cwd": str(self.chemeleon_path)
+                },
+                cache_tools_list=False,
+                client_session_timeout_seconds=30  # Longer timeout for model loading
+            ) as chemeleon_server:
+                agent = Agent(
+                    name="CrystaLyse (Creative Mode + CSP)",
+                    model=self.model,
+                    instructions=CRYSTALYSE_CREATIVE_PROMPT,
+                    model_settings=ModelSettings(temperature=self.temperature),
+                    mcp_servers=[chemeleon_server],  # Only Chemeleon, no SMACT validation
+                )
+                
+                # Run the analysis
+                response = await Runner.run(
+                    starting_agent=agent,
+                    input=query
+                )
+                
+                return response.final_output
         
     async def analyze_streamed(self, query: str):
         """
@@ -415,7 +458,7 @@ class CrystaLyseAgent:
         """
         # Choose prompt and MCP configuration based on mode
         if self.use_chem_tools:
-            # Rigorous mode: Use SMACT tools with constraining prompt
+            # Rigorous mode: Use both SMACT and Chemeleon tools
             async with MCPServerStdio(
                 name="SMACT Tools",
                 params={
@@ -425,14 +468,23 @@ class CrystaLyseAgent:
                 },
                 cache_tools_list=False,
                 client_session_timeout_seconds=10
-            ) as smact_server:
-                # Create agent with MCP server for rigorous validation
+            ) as smact_server, MCPServerStdio(
+                name="Chemeleon CSP",
+                params={
+                    "command": "python",
+                    "args": ["-m", "chemeleon_mcp"],
+                    "cwd": str(self.chemeleon_path)
+                },
+                cache_tools_list=False,
+                client_session_timeout_seconds=30  # Longer timeout for model loading
+            ) as chemeleon_server:
+                # Create agent with both MCP servers for rigorous validation and structure generation
                 agent = Agent(
-                    name="CrystaLyse (Rigorous Mode)",
+                    name="CrystaLyse (Rigorous Mode + CSP)",
                     model=self.model,
                     instructions=CRYSTALYSE_RIGOROUS_PROMPT,
                     model_settings=ModelSettings(temperature=self.temperature),
-                    mcp_servers=[smact_server],
+                    mcp_servers=[smact_server, chemeleon_server],
                 )
                 
                 # Stream the analysis
@@ -444,20 +496,30 @@ class CrystaLyseAgent:
                 async for event in result.stream_events():
                     yield event
         else:
-            # Creative mode: Use chemical intuition without tool constraints
-            agent = Agent(
-                name="CrystaLyse (Creative Mode)",
-                model=self.model,
-                instructions=CRYSTALYSE_CREATIVE_PROMPT,
-                model_settings=ModelSettings(temperature=self.temperature),
-                # No MCP servers in creative mode - pure chemical intuition
-            )
-            
-            # Stream the analysis
-            result = Runner.run_streamed(
-                starting_agent=agent,
-                input=query
-            )
-            
-            async for event in result.stream_events():
-                yield event
+            # Creative mode: Use Chemeleon for structure generation with chemical intuition
+            async with MCPServerStdio(
+                name="Chemeleon CSP",
+                params={
+                    "command": "python",
+                    "args": ["-m", "chemeleon_mcp"],
+                    "cwd": str(self.chemeleon_path)
+                },
+                cache_tools_list=False,
+                client_session_timeout_seconds=30  # Longer timeout for model loading
+            ) as chemeleon_server:
+                agent = Agent(
+                    name="CrystaLyse (Creative Mode + CSP)",
+                    model=self.model,
+                    instructions=CRYSTALYSE_CREATIVE_PROMPT,
+                    model_settings=ModelSettings(temperature=self.temperature),
+                    mcp_servers=[chemeleon_server],  # Only Chemeleon, no SMACT validation
+                )
+                
+                # Stream the analysis
+                result = Runner.run_streamed(
+                    starting_agent=agent,
+                    input=query
+                )
+                
+                async for event in result.stream_events():
+                    yield event

@@ -11,7 +11,7 @@ import logging
 import torch
 from chemeleon_dng.diffusion.diffusion_module import DiffusionModule
 from chemeleon_dng.script_util import create_diffusion_module
-from chemeleon_dng.download_util import download_checkpoint, get_benchmark_path
+from chemeleon_dng.download_util import get_checkpoint_path
 import ase
 from ase.io import write as ase_write
 from pymatgen.core import Structure
@@ -53,7 +53,13 @@ def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer
     
     # Download checkpoint if needed
     if checkpoint_path is None:
-        checkpoint_path = download_checkpoint(task=task)
+        # Default checkpoint paths for different tasks
+        default_paths = {
+            "csp": "ckpts/chemeleon_csp_alex_mp_20_v0.0.2.ckpt",
+            "dng": "ckpts/chemeleon_dng_alex_mp_20_v0.0.2.ckpt",
+            "guide": "."
+        }
+        checkpoint_path = get_checkpoint_path(task=task, default_paths=default_paths)
     
     # Load model
     device = _get_device(prefer_gpu=prefer_gpu)
@@ -129,11 +135,24 @@ def generate_crystal_csp(
         for formula in formulas:
             logger.info(f"Generating {num_samples} structures for {formula}")
             
+            # Parse formula to get atom types and counts
+            from pymatgen.core import Composition
+            comp = Composition(formula)
+            
+            # Create atom_types and num_atoms for all samples
+            batch_atom_types = []
+            batch_num_atoms = []
+            
+            for _ in range(num_samples):
+                atomic_numbers = [el.Z for el, amt in comp.items() for _ in range(int(amt))]
+                batch_atom_types.extend(atomic_numbers)
+                batch_num_atoms.append(len(atomic_numbers))
+            
             # Sample structures
             samples = model.sample(
-                formulas=[formula] * num_samples,
                 task="csp",
-                batch_size=batch_size
+                atom_types=batch_atom_types,
+                num_atoms=batch_num_atoms
             )
             
             # Convert to desired format
@@ -188,13 +207,8 @@ def get_model_info() -> str:
         }
         
         # Check for benchmark files
-        for task in ["csp"]:
-            try:
-                bench_path = get_benchmark_path(task)
-                if bench_path and os.path.exists(bench_path):
-                    info["benchmarks"][task] = str(bench_path)
-            except:
-                pass
+        # Note: benchmark path functionality not available in current download_util
+        # This can be added later if needed
         
         return json.dumps(info, indent=2)
         

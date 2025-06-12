@@ -1,7 +1,7 @@
 [project]
 name = "crystalyse"
-version = "0.1.0"
-description = "CrystaLyse - An autonomous materials discovery agent leveraging SMACT and OpenAI Agents SDK"
+version = "0.2.0"
+description = "CrystaLyse.AI - Revolutionary dual-mode materials discovery with crystal structure prediction and interactive visualization"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -9,6 +9,7 @@ dependencies = [
     "openai-agents>=0.0.16",
     "mcp>=0.1.0",
     "pymatgen>=2024.1.0",
+    "ase>=3.22.0",
     "numpy>=1.24.0",
     "pandas>=2.0.0",
     "typing-extensions>=4.5.0",
@@ -25,6 +26,16 @@ dev = [
     "pytest-cov>=4.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+]
+
+visualization = [
+    "plotly>=5.18.0",
+    "py3Dmol>=2.0.4",
+    "kaleido>=0.2.1",
+]
+
+all = [
+    "crystalyse[visualization]",
 ]
 
 [project.scripts]
