@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-06-13T17:51:11.461485",
+  "tests": {
+    "Server Connection Test": {
+      "success": false,
+      "error": "Server connection failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Creative Mode + MACE": {
+      "success": false,
+      "error": "Creative mode test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Rigorous Mode + Full Stack": {
+      "success": false,
+      "error": "Rigorous mode test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Energy Analysis Mode": {
+      "success": false,
+      "error": "Energy analysis test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Batch Screening Test": {
+      "success": false,
+      "error": "Batch screening test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Multi-fidelity Workflow": {
+      "success": false,
+      "error": "Multi-fidelity test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Uncertainty Quantification": {
+      "success": false,
+      "error": "Uncertainty quantification test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Chemical Substitutions": {
+      "success": false,
+      "error": "Chemical substitution test failed: '_GatheringFuture' object does not support the asynchronous context manager protocol"
+    }
+  },
+  "summary": {
+    "total_tests": 8,
+    "passed": 0,
+    "failed": 8,
+    "success_rate": "0.0%"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "timestamp": "20250613_174052",
+  "total_tests": 3,
+  "successful": 0,
+  "failed": 3,
+  "success_rate": "0.0%",
+  "test_results": {
+    "Battery Cathode Discovery": {
+      "success": false,
+      "error": "'_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Energy Analysis Workflow": {
+      "success": false,
+      "error": "'_GatheringFuture' object does not support the asynchronous context manager protocol"
+    },
+    "Creative vs Energy-Focused": {
+      "success": false,
+      "creative_success": false,
+      "energy_success": false,
+      "comparison_file": "/home/ryan/crystalyseai/CrystaLyse.AI/complete_workflow/mode_comparison_20250613_174052.json"
+    }
+  }
+}

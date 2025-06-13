@@ -55,8 +55,8 @@ def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer
     if checkpoint_path is None:
         # Default checkpoint paths for different tasks
         default_paths = {
-            "csp": "ckpts/chemeleon_csp_alex_mp_20_v0.0.2.ckpt",
-            "dng": "ckpts/chemeleon_dng_alex_mp_20_v0.0.2.ckpt",
+            "csp": "/home/ryan/crystalyseai/ckpts/chemeleon_csp_alex_mp_20_v0.0.2.ckpt",
+            "dng": "/home/ryan/crystalyseai/ckpts/chemeleon_dng_alex_mp_20_v0.0.2.ckpt",
             "guide": "."
         }
         checkpoint_path = get_checkpoint_path(task=task, default_paths=default_paths)
