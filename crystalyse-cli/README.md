@@ -1,273 +1,122 @@
-# CrystaLyse.AI Interactive CLI
+# CrystaLyse.AI Python CLI Documentation
 
-**Revolutionary Interactive Interface for Materials Discovery**
+This directory contains comprehensive documentation for the CrystaLyse.AI Python CLI - a pure Python command-line interface for materials discovery and crystal structure analysis.
 
-The CrystaLyse.AI CLI provides a sophisticated conversational interface to the CrystaLyse.AI materials discovery platform, featuring real-time 3D visualization, intelligent session management, and seamless integration with the full CrystaLyse.AI analysis pipeline.
+## 📋 Contents
 
-## ✨ Features
-
-### 🎨 Interactive Shell
-- **Natural Language Interface**: Simply type your materials research questions
-- **Dual-Mode Support**: Switch between Creative and Rigorous analysis modes
-- **Real-time Progress**: Live feedback with progress indicators and status updates
-- **Command Autocomplete**: Smart suggestions for commands and chemical formulas
-- **Multi-line Input**: Support for complex queries with detailed specifications
-
-### 🔬 3D Visualization
-- **Automatic Browser Launch**: Structures open automatically in your default browser
-- **Multiple Rendering Styles**: Stick, sphere, cartoon, and surface representations
-- **Interactive Controls**: Rotate, zoom, pan with mouse controls
-- **Property Display**: Lattice parameters, space groups, and calculated properties
-- **Structure Comparison**: Side-by-side comparison of multiple structures
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-
-### 💾 Session Management
-- **Save & Resume**: Save research sessions and continue later
-- **Command History**: Full history of all queries and results
-- **Session Branching**: Fork sessions to explore different research paths
-- **Export Options**: Save results in multiple formats (JSON, CIF, HTML)
-- **Configuration Persistence**: Remember user preferences and settings
-
-### ⚡ Performance Features
-- **Intelligent Caching**: Results cached for faster repeated queries
-- **Streaming Output**: Real-time updates during long analysis operations
-- **Non-blocking UI**: Continue working while visualizations load
-- **Background Processing**: Python analysis runs in separate process
-- **Graceful Degradation**: Demo mode when full CrystaLyse.AI unavailable
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user guide with examples and tutorials
+- **[IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md)** - Technical implementation details for developers
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Detailed API documentation
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
 
 ## 🚀 Quick Start
 
 ### Installation
 ```bash
-# From the CrystaLyse.AI directory
-cd crystalyse-cli
-npm install
-npm run build
+# Install CrystaLyse.AI
+pip install -e .
+
+# Set up API key
+export OPENAI_MDG_API_KEY="your_api_key_here"
 ```
 
 ### Basic Usage
+
+#### Interactive Shell (Default)
 ```bash
 # Start interactive shell
-crystalyse shell
+crystalyse
 
-# Direct analysis
+# Or explicitly
+crystalyse shell
+```
+
+#### One-time Analysis
+```bash
+# Analyze a materials query
 crystalyse analyze "Design a battery cathode material"
 
-# View structures
-crystalyse view structure.cif
+# With options
+crystalyse analyze "Find lead-free ferroelectrics" --stream --output results.json
+```
+
+#### Other Commands
+```bash
+# Show system status
+crystalyse status
+
+# View examples
+crystalyse examples
 
 # Get help
 crystalyse --help
 ```
 
-### Interactive Session Example
-```bash
-🔬 crystalyse > Design a sodium-ion battery cathode
-⚡ Analyzing query...
-✓ Analysis complete
+## ✨ Key Features
 
-📊 Result: Na3V2(PO4)2F3
-• Voltage: 3.95V vs Na/Na+
-• Capacity: 128 mAh/g
-• Structure: NASICON framework
+### Interactive Shell
+- **Conversational Interface**: Natural language queries for materials discovery
+- **Session Management**: Maintains context across multiple queries
+- **Command History**: Browse previous queries with arrow keys
+- **Auto-completion**: Tab completion for commands and common queries
+- **Real-time Streaming**: Watch analysis progress in real-time
 
-[V]iew 3D  [E]xport  [S]ave  [C]ontinue
+### Analysis Modes
+- **Rigorous Mode**: Detailed scientific analysis with validation (default)
+- **Creative Mode**: Faster exploration with novel ideas
 
-🔬 crystalyse > v
-✨ Opening 3D viewer in browser...
+### Visualization
+- **3D Structure Viewer**: Browser-based crystal structure visualization
+- **Rich Terminal Output**: Formatted tables, panels, and progress indicators
+- **Export Capabilities**: JSON export for analysis results
 
-🔬 crystalyse > /save naion_research
-✅ Session saved as: naion_research
-```
-
-## 📖 Commands Reference
-
-### Interactive Shell Commands
-
-**Analysis Commands:**
-- `/analyze <query>` - Full materials analysis with auto-view option
-- `/screen <criteria>` - Batch screening mode  
-- `/predict <formula>` - Quick structure prediction
-- `/validate <composition>` - SMACT validation only
-
-**Visualization Commands:**
-- `/view [structure]` - Open 3D structure in browser
-- `/compare <struct1> <struct2>` - Side-by-side comparison
-- `/export <format>` - Export results (CIF, JSON, HTML)
-
-**Session Commands:**
-- `/save [name]` - Save current session
-- `/load <session>` - Load previous session
-- `/history` - Show command history
-- `/fork` - Create session branch
-
-**System Commands:**
+### Built-in Commands
+- `/help` - Show detailed help
 - `/mode [creative|rigorous]` - Switch analysis modes
-- `/quick-view` - Toggle auto-view after analysis
-- `/config` - View/edit configuration
+- `/view` - View last structure in 3D
+- `/export [filename]` - Export session results
+- `/history` - Show analysis history
 - `/status` - System status
-- `/help` - Show all commands
+- `/examples` - Example queries
+- `/clear` - Clear screen
 - `/exit` - Exit shell
 
-### CLI Commands
+## 🔧 Architecture Overview
 
-**Analysis:**
-```bash
-crystalyse analyze [options] "<query>"
-  --mode <mode>        Analysis mode (creative|rigorous)
-  --output <file>      Save results to file
-  --format <format>    Output format (json|yaml|text)
-  --view              Auto-open 3D viewer
-```
+The CrystaLyse.AI Python CLI is built with:
 
-**Visualization:**
-```bash
-crystalyse view [options] <file>
-  --style <style>      Visualization style (stick|sphere|cartoon)
-  --theme <theme>      Color theme (light|dark)
-  --labels            Show atom labels
-  --unit-cell         Show unit cell
-```
+- **Click**: Command-line interface framework
+- **Rich**: Beautiful terminal formatting and progress indicators
+- **Prompt Toolkit**: Interactive shell with history and completion
+- **AsyncIO**: Asynchronous processing for real-time analysis
+- **OpenAI Agents**: Integration with AI agents for materials discovery
+- **MCP Servers**: Modular Component Protocol for extensible tools
 
-**Comparison:**
-```bash
-crystalyse compare [options] <file1> <file2> [file3...]
-  --property <prop>    Highlight property differences
-  --output <file>      Save comparison report
-```
+## 📖 Documentation Structure
 
-## ⚙️ Configuration
+### For Users
+- Start with [USER_GUIDE.md](USER_GUIDE.md) for complete usage instructions
+- Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) if you encounter issues
 
-### CRYSTALYSE.md File
-Create a `CRYSTALYSE.md` file in your working directory for project-specific settings:
+### For Developers
+- Read [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md) for technical details
+- Refer to [API_REFERENCE.md](API_REFERENCE.md) for API documentation
 
-```markdown
-# Project Configuration
-mode: rigorous
-auto_view: true
-viewer_theme: dark
+## 🆘 Getting Help
 
-# Visualization Preferences
-viz_settings:
-  style: ball_and_stick
-  show_unit_cell: true
-  background_color: "#1a1a1a"
-  auto_rotate: false
-  
-# Chemical Systems of Interest
-focus_elements: [Li, Na, K, Fe, Mn, Co, Ni]
-exclude_elements: [Pb, Cd, Hg]
+1. **Built-in Help**: Use `crystalyse --help` or `/help` in the shell
+2. **Documentation**: Read the guides in this directory
+3. **Examples**: Run `crystalyse examples` for inspiration
+4. **Status Check**: Use `crystalyse status` to verify configuration
 
-# Saved Criteria Sets
-@battery_criteria:
-  voltage: 2.5-4.0
-  capacity: >100
-  stability: >0.8
-```
+## 🔄 Migration from Node.js CLI
 
-### User Preferences
-- Session storage: `~/.crystalyse/sessions/`
-- Cache directory: `~/.crystalyse/cache/`
-- Configuration: `CRYSTALYSE.md` in working directory
+This pure Python CLI replaces the previous Node.js + Python bridge architecture, providing:
 
-## 🏗️ Technical Architecture
+- **Simplified Architecture**: Single language, no inter-process communication
+- **Better Performance**: Direct Python integration, no serialization overhead
+- **Easier Debugging**: Single codebase, clearer error messages
+- **Reduced Dependencies**: No Node.js required, pure Python ecosystem
+- **Enhanced Features**: Interactive shell, session management, 3D visualization
 
-### Components
-- **TypeScript Frontend**: Modern CLI interface with rich terminal UI
-- **Python Bridge**: Event-driven communication with CrystaLyse.AI
-- **3DMol.js Integration**: WebGL-based 3D molecular visualization
-- **Session Management**: JSON-based persistent storage
-- **Intelligent Caching**: LRU cache with TTL for performance
-
-### Dependencies
-- **Node.js 16+**: JavaScript runtime for CLI
-- **Python 3.8+**: Backend analysis engine
-- **Modern Browser**: For 3D visualization (Chrome, Firefox, Safari, Edge)
-- **CrystaLyse.AI**: Main analysis platform
-
-## 🧪 Testing
-
-### Run Tests
-```bash
-# Basic functionality test
-node test_basic.js
-
-# Integration test
-node test_integration.js
-
-# Interactive shell test
-node test_interactive.js
-```
-
-### Test Coverage
-- ✅ CLI command parsing and routing
-- ✅ Python bridge communication
-- ✅ 3D visualization template generation
-- ✅ Session save/load functionality
-- ✅ Cross-platform browser launching
-- ✅ Error handling and graceful degradation
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**CLI Won't Start:**
-```bash
-# Check Node.js version
-node --version  # Should be 16+
-
-# Rebuild CLI
-npm run build
-
-# Check Python bridge
-python3 src/bridge/crystalyse_bridge.py
-```
-
-**Browser Won't Open:**
-- Set default browser: `export BROWSER=chrome`
-- Manual open: CLI provides file paths for manual opening
-- Check browser installation
-
-**Python Bridge Errors:**
-- Ensure CrystaLyse.AI is properly installed
-- Check Python path and dependencies
-- CLI automatically falls back to demo mode if needed
-
-### Performance Tips
-1. Use Creative mode for faster exploration
-2. Enable caching for repeated queries
-3. Close unused browser tabs to free memory
-4. Use session management to avoid re-running analyses
-
-## 📈 Performance Metrics
-
-- **Startup Time**: <1.2s cold, <0.4s warm
-- **Visualization Launch**: <500ms average
-- **Memory Usage**: 35-55MB base, +15MB per visualization
-- **Cache Hit Rate**: >85% for repeated queries
-- **Cross-Platform Success**: >95% browser launch rate
-
-## 🤝 Contributing
-
-The CLI follows modern TypeScript development practices:
-
-```bash
-# Development setup
-npm install
-npm run build
-npm run test
-
-# Code formatting
-npm run lint
-npm run format
-```
-
-## 📄 License
-
-Part of the CrystaLyse.AI project, licensed under MIT License.
-
----
-
-**Happy Materials Discovery! 🔬✨**
-
-*The CrystaLyse.AI CLI transforms computational materials science into an intuitive, conversational experience.*
+The new CLI maintains all functionality from the previous version while adding significant improvements in usability and maintainability.

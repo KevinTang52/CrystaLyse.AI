@@ -116,9 +116,10 @@ _api_configured = configure_openai_client()
 API_CONFIGURED = _api_configured
 USING_MDG_KEY = os.getenv("OPENAI_MDG_API_KEY") is not None
 
-if USING_MDG_KEY:
-    print("🚀 CrystaLyse.AI: High-performance mode enabled with MDG API key")
-    print(f"📊 Rate limits: {MDG_RATE_LIMITS['tokens_per_minute']:,} TPM, {MDG_RATE_LIMITS['requests_per_minute']:,} RPM")
-    print("🔄 OPENAI_API_KEY set to MDG key for agents package")
-else:
-    print("❌ CrystaLyse.AI: OPENAI_MDG_API_KEY required - please set this environment variable")
+# Startup messages suppressed - configuration status available via verify_rate_limits()
+# if USING_MDG_KEY:
+#     print("🚀 CrystaLyse.AI: High-performance mode enabled with MDG API key")
+#     print(f"📊 Rate limits: {MDG_RATE_LIMITS['tokens_per_minute']:,} TPM, {MDG_RATE_LIMITS['requests_per_minute']:,} RPM")
+#     print("🔄 OPENAI_API_KEY set to MDG key for agents package")
+# else:
+#     print("❌ CrystaLyse.AI: OPENAI_MDG_API_KEY required - please set this environment variable")

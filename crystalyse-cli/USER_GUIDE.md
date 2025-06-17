@@ -1,480 +1,532 @@
-# CrystaLyse.AI CLI User Guide
+# CrystaLyse.AI Python CLI User Guide
 
-## Table of Contents
-1. [Installation](#installation)
-2. [Quick Start](#quick-start)
+Welcome to CrystaLyse.AI! This comprehensive guide will help you master the Python CLI for materials discovery and crystal structure analysis.
+
+## 📚 Table of Contents
+
+1. [Installation & Setup](#installation--setup)
+2. [Getting Started](#getting-started)
 3. [Interactive Shell](#interactive-shell)
-4. [Commands Reference](#commands-reference)
-5. [Visualization Features](#visualization-features)
-6. [Session Management](#session-management)
-7. [Configuration](#configuration)
-8. [Examples](#examples)
-9. [Troubleshooting](#troubleshooting)
+4. [Command Reference](#command-reference)
+5. [Analysis Modes](#analysis-modes)
+6. [Visualization](#visualization)
+7. [Session Management](#session-management)
+8. [Advanced Usage](#advanced-usage)
+9. [Tips & Best Practices](#tips--best-practices)
+10. [Example Workflows](#example-workflows)
 
-## Installation
+## 🛠 Installation & Setup
 
 ### Prerequisites
-- Node.js 16+ 
-- Python 3.8+
-- A modern web browser for 3D visualization
+- Python 3.10 or higher
+- OpenAI API key with Materials Discovery Gateway access
 
-### Setup
+### Installation
 ```bash
-# From the main CrystaLyse.AI directory
-cd crystalyse-cli
+# Navigate to the CrystaLyse.AI directory
+cd /path/to/CrystaLyse.AI
 
-# Install dependencies
-npm install
+# Install in development mode
+pip install -e .
 
-# Build the project
-npm run build
-
-# Test installation
-node dist/index.js --help
-
-# Or use the Python launcher (recommended)
-cd ..
-python crystalyse/cli_launcher.py --help
+# Install with visualization dependencies (optional)
+pip install -e ".[visualization]"
 ```
 
-## Quick Start
-
-### 1. Basic Usage
+### API Key Configuration
 ```bash
-# Show help
-crystalyse --help
+# Set your OpenAI MDG API key
+export OPENAI_MDG_API_KEY="your_mdg_api_key_here"
 
-# Start interactive shell
-crystalyse shell
-
-# Analyze a specific query
-crystalyse analyze "Design a sodium-ion battery cathode"
-
-# View structure (if you have a CIF file)
-crystalyse view structure.cif
+# Alternative: Regular OpenAI API key (lower rate limits)
+export OPENAI_API_KEY="your_api_key_here"
 ```
 
-### 2. Your First Analysis
+### Verify Installation
 ```bash
-# Start the interactive shell
-crystalyse shell
+# Check status
+crystalyse status
 
-# In the shell, try these queries:
-> Design a battery cathode material
-> Find materials with band gap 2-3 eV
-> /validate LiFePO4
-> /status
-> /help
+# Should show ✅ Configured for API connection
 ```
 
-## Interactive Shell
+## 🚀 Getting Started
 
-The interactive shell is the heart of CrystaLyse CLI, providing a conversational interface for materials discovery.
-
-### Starting the Shell
+### Quick Start
 ```bash
-crystalyse shell
+# Start CrystaLyse.AI (launches interactive shell by default)
+crystalyse
 ```
 
-You'll see the CrystaLyse ASCII banner and the prompt:
+You'll see the welcome banner and prompt:
 ```
-🔬 crystalyse > 
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           🔬 CrystaLyse.AI Shell 🔬                         ║
+║                     Interactive Materials Discovery                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+🔬 crystalyse (rigorous) > 
 ```
 
-The emoji indicates the current mode:
-- 🔬 Rigorous mode (default)
-- 🎨 Creative mode
-
-### Natural Language Queries
-Simply type your materials research questions:
-
+### Your First Query
+Try asking for a specific material:
 ```
-> Design a lead-free ferroelectric material
-> Find perovskites with high dielectric constants  
-> What are good cathode materials for sodium batteries?
-> Analyze the stability of CsPbI3
+🔬 crystalyse (rigorous) > Design a cathode material for sodium-ion batteries
 ```
+
+CrystaLyse.AI will analyze your request and provide:
+- Suggested compositions
+- Crystal structures
+- Properties and validation
+- Detailed analysis
+- Recommendations
+
+## 🖥 Interactive Shell
+
+The interactive shell is the primary interface for CrystaLyse.AI, offering a conversational approach to materials discovery.
+
+### Shell Features
+
+#### Command History
+- **Up/Down arrows**: Browse previous queries
+- **Ctrl+R**: Search command history
+- **Auto-save**: History automatically saved between sessions
+
+#### Auto-completion
+- **Tab**: Complete commands and common queries
+- **Smart suggestions**: Based on your usage patterns
+
+#### Real-time Progress
+- **Streaming output**: Watch analysis progress in real-time
+- **Progress indicators**: Visual feedback for long operations
+- **Interrupt**: Use Ctrl+C to interrupt analysis
 
 ### Shell Commands
+
 All shell commands start with `/`:
 
-#### Analysis Commands
-- `/analyze <query>` - Full materials analysis
-- `/screen <criteria>` - Batch screening mode
-- `/predict <formula>` - Structure prediction only
-- `/validate <composition>` - SMACT validation
-- `/energy <structure>` - Energy calculation
-
-#### Visualization Commands
-- `/view [structure]` - Open 3D viewer in browser
-- `/compare <struct1> <struct2>` - Side-by-side comparison
-- `/export <format>` - Export results (CIF, JSON, HTML)
-
-#### Session Commands
-- `/save [name]` - Save current session
-- `/load <session>` - Load previous session
-- `/history` - Show command history
-- `/fork` - Create session branch
-
-#### System Commands
-- `/mode [creative|rigorous]` - Switch analysis modes
-- `/quick-view` - Toggle auto-view after analysis
-- `/config` - View/edit configuration
-- `/status` - System status
-- `/help` - Show all commands
-- `/exit` - Exit shell
-
-### Modes
-
-#### Rigorous Mode (🔬)
-- Emphasis on validated, well-established materials
-- Conservative predictions
-- Detailed uncertainty quantification
-- Literature-backed recommendations
-
-#### Creative Mode (🎨)
-- More exploratory and speculative suggestions
-- Novel material combinations
-- Higher risk, higher reward predictions
-- Broader search space
-
-Switch modes with:
-```
-> /mode creative
-> /mode rigorous
+```bash
+/help           # Show detailed help
+/mode creative  # Switch to creative mode
+/mode rigorous  # Switch to rigorous mode (default)
+/view           # View last structure in 3D browser
+/export         # Export session to JSON
+/export my_results.json  # Export with custom filename
+/history        # Show analysis history
+/clear          # Clear the screen
+/status         # Show system status
+/examples       # Show example queries
+/exit           # Exit the shell
 ```
 
-## Commands Reference
+## 📖 Command Reference
 
-### Shell Command
-Start the interactive shell for conversational materials discovery.
+### Core Commands
+
+#### `crystalyse` (default)
+Starts the interactive shell.
+```bash
+crystalyse
+```
+
+#### `crystalyse shell`
+Explicitly starts the interactive shell.
+```bash
+crystalyse shell
+```
+
+#### `crystalyse analyze`
+Performs one-time analysis without entering the shell.
+```bash
+crystalyse analyze "Design a battery cathode material"
+
+# With options
+crystalyse analyze "Find lead-free ferroelectrics" \
+  --model gpt-4o \
+  --temperature 0.3 \
+  --stream \
+  --output results.json
+```
+
+**Options:**
+- `--model`: AI model to use (default: gpt-4o)
+- `--temperature`: Creativity vs precision (0.0-1.0, default: 0.7)
+- `--output, -o`: Save results to JSON file
+- `--stream`: Enable real-time streaming output
+
+#### `crystalyse status`
+Shows configuration and system status.
+```bash
+crystalyse status
+```
+
+#### `crystalyse examples`
+Displays example queries for inspiration.
+```bash
+crystalyse examples
+```
+
+#### `crystalyse server`
+Starts SMACT MCP server for testing (development only).
+```bash
+crystalyse server
+```
+
+## 🎯 Analysis Modes
+
+CrystaLyse.AI offers two complementary analysis modes:
+
+### Rigorous Mode (Default)
+- **Focus**: Scientific accuracy and validation
+- **Speed**: Slower but thorough
+- **Use cases**: 
+  - Research publications
+  - Experimental design
+  - Critical applications
+  - Detailed property calculations
 
 ```bash
-crystalyse shell [options]
-
-Options:
-  --mode <mode>     Start in specific mode (creative|rigorous)
-  --auto-view       Enable auto-view for structures
-  --theme <theme>   Set visualization theme (light|dark)
+# In shell
+/mode rigorous
+Design a cathode for commercial lithium-ion batteries
 ```
 
-### Analyze Command
-Perform one-shot analysis from command line.
+### Creative Mode
+- **Focus**: Novel ideas and exploration
+- **Speed**: Faster analysis
+- **Use cases**:
+  - Brainstorming sessions
+  - Novel material concepts
+  - Quick feasibility checks
+  - Educational purposes
 
 ```bash
-crystalyse analyze [options] <query>
-
-Options:
-  --mode <mode>     Analysis mode (creative|rigorous)
-  --output <file>   Save results to file
-  --format <fmt>    Output format (json|yaml|text)
-  --view            Auto-open 3D viewer
+# In shell
+/mode creative
+What if we could make transparent metals?
 ```
 
-Examples:
+### Switching Modes
 ```bash
-crystalyse analyze "sodium battery cathode" --mode rigorous --view
-crystalyse analyze "high temperature superconductor" --output results.json
+# In interactive shell
+/mode creative    # Switch to creative mode
+/mode rigorous    # Switch to rigorous mode
+
+# Current mode is shown in the prompt:
+🎨 crystalyse (creative) >   # Creative mode
+🔬 crystalyse (rigorous) >   # Rigorous mode
 ```
 
-### View Command
-Visualize crystal structures in 3D.
-
-```bash
-crystalyse view [options] <file>
-
-Options:
-  --style <style>   Visualization style (stick|sphere|cartoon)
-  --theme <theme>   Color theme (light|dark)
-  --labels          Show atom labels
-  --unit-cell       Show unit cell
-```
-
-Examples:
-```bash
-crystalyse view structure.cif --style sphere --labels
-crystalyse view structure.cif --theme dark --unit-cell
-```
-
-### Compare Command
-Compare multiple crystal structures side-by-side.
-
-```bash
-crystalyse compare [options] <file1> <file2> [file3...]
-
-Options:
-  --property <prop> Highlight property differences
-  --output <file>   Save comparison report
-```
-
-Example:
-```bash
-crystalyse compare LiFePO4.cif NaFePO4.cif --property voltage
-```
-
-## Visualization Features
+## 🔍 Visualization
 
 ### 3D Structure Viewer
-The CLI automatically generates interactive 3D visualizations using 3Dmol.js:
+When CrystaLyse.AI generates crystal structures, you can visualize them in 3D:
 
-#### Features
-- **Rotate**: Click and drag to rotate
-- **Zoom**: Mouse wheel or pinch to zoom
-- **Pan**: Right-click and drag to pan
-- **Styles**: Switch between stick, sphere, cartoon, surface
-- **Labels**: Toggle atom/bond labels
-- **Unit Cell**: Show/hide unit cell boundaries
+```bash
+# After running an analysis that generates a structure
+/view
+```
 
-#### Visualization Options
-```javascript
-// Available in visualization preferences
+This will:
+1. Generate an interactive HTML viewer
+2. Open it in your default web browser
+3. Display the crystal structure with:
+   - Rotatable 3D model
+   - Atom labels and bonds
+   - Unit cell visualization
+   - Property information
+
+### Structure Viewer Features
+- **Interactive rotation**: Click and drag to rotate
+- **Zoom**: Mouse wheel or pinch gestures
+- **Atom information**: Click atoms for details
+- **Export**: Save structure in various formats
+
+## 💾 Session Management
+
+### Session Features
+- **Automatic tracking**: All queries and results are tracked
+- **Session ID**: Unique identifier for each session
+- **History persistence**: Command history saved between sessions
+
+### Export Session Data
+```bash
+# Export current session
+/export
+
+# Export with custom filename
+/export my_battery_research.json
+```
+
+### Session Data Structure
+Exported JSON contains:
+```json
 {
-  style: 'stick' | 'sphere' | 'cartoon' | 'surface',
-  showUnitCell: true | false,
-  showLabels: true | false,
-  backgroundColor: '#ffffff' | '#1a1a1a',
-  autoRotate: true | false
+  "session_id": "20241216_143052",
+  "export_time": "2024-12-16T14:35:22.123456",
+  "mode": "rigorous",
+  "total_queries": 5,
+  "history": [
+    {
+      "timestamp": "2024-12-16T14:30:52.123456",
+      "query": "Design a cathode for sodium-ion batteries",
+      "mode": "rigorous",
+      "result": {
+        "composition": "Na2FePO4F",
+        "properties": {...},
+        "structure": "...",
+        "analysis": "...",
+        "confidence": 0.85
+      }
+    }
+  ]
 }
 ```
 
-### Auto-View
-Enable automatic visualization after each analysis:
-
-```
-> /quick-view  # Toggle auto-view
-```
-
-When enabled, structures automatically open in your browser after analysis.
-
-### Quick Actions
-After each analysis, use quick actions for immediate follow-up:
-
-- `[V]iew 3D` - Open 3D visualization
-- `[E]xport` - Export structure/data
-- `[S]ave` - Save to current session
-- `[C]ontinue` - Return to shell
-
-## Session Management
-
-### Saving Sessions
-```
-> /save my_research_session
-✅ Session saved as: my_research_session
-```
-
-### Loading Sessions
-```
-> /load my_research_session
-✅ Session loaded: my_research_session
-```
-
-### Session Contents
-Sessions include:
-- Command history
-- Analysis results
-- Current mode settings
-- Visualization preferences
-- Bookmarked discoveries
-
-### Session Files
-Sessions are stored as JSON files in `~/.crystalyse/sessions/`
-
-## Configuration
-
-### CRYSTALYSE.md File
-Create a `CRYSTALYSE.md` file in your working directory for project-specific settings:
-
-```markdown
-# Project Configuration
-mode: rigorous
-default_temperature: 0.7
-auto_view: true
-viewer_theme: dark
-
-# Visual Feedback Preferences
-feedback:
-  show_progress: true
-  show_estimates: true
-  sound_alerts: false
-
-# Visualization Preferences
-viz_settings:
-  style: ball_and_stick
-  show_unit_cell: true
-  background_color: "#1a1a1a"
-  auto_rotate: false
-  
-# Chemical Systems of Interest
-focus_elements: [Li, Na, K, Fe, Mn, Co, Ni]
-exclude_elements: [Pb, Cd, Hg]
-
-# Saved Criteria Sets
-@battery_criteria:
-  voltage: 2.5-4.0
-  capacity: >100
-  stability: >0.8
-
-@solar_criteria:
-  band_gap: 1.5-3.0
-  absorption: >10^4
-  stability: >0.9
-
-# Workflow Shortcuts
-@battery_screening: screen for cathode with @battery_criteria
-@solar_search: find semiconductors with @solar_criteria
-```
-
-### Configuration Commands
-```
-> /config            # View current configuration
-> /config edit       # Edit configuration file
-> /theme dark        # Set visualization theme
-```
-
-## Examples
-
-### Example 1: Battery Materials Research
+### View Session History
 ```bash
-# Start shell
-crystalyse shell
-
-# Set focus on battery materials
-> /mode rigorous
-> Design high-capacity cathode materials for sodium-ion batteries
-
-# The system will analyze and provide results
-# View the structure in 3D
-> /view
-
-# Save promising results
-> /save sodium_cathodes_2024
-
-# Compare with existing materials
-> /compare current_result LiFePO4
+# In shell
+/history
 ```
 
-### Example 2: Solar Cell Materials
+Shows a table with:
+- Timestamp of each query
+- Analysis mode used
+- Query text (truncated)
+- Resulting composition
+
+## 🔧 Advanced Usage
+
+### Environment Variables
 ```bash
-crystalyse shell
+# API Configuration
+export OPENAI_MDG_API_KEY="your_mdg_key"     # Preferred (high rate limits)
+export OPENAI_API_KEY="your_regular_key"     # Alternative (lower limits)
 
-# Creative exploration
-> /mode creative
-> Find lead-free perovskites for tandem solar cells
+# Model Configuration
+export CRYSTALYSE_DEFAULT_MODEL="gpt-4o"     # Override default model
+export CRYSTALYSE_TEMPERATURE="0.7"          # Override default temperature
 
-# Validate a specific composition
-> /validate CH3NH3SnI3
-
-# Screen for optimal band gaps
-> /screen band_gap:1.2-1.8 stability:>0.8
-
-# Export results for publication
-> /export paper-ready
+# Debugging
+export CRYSTALYSE_DEBUG="true"               # Enable debug logging
+export CRYSTALYSE_VERBOSE="true"             # Verbose output
 ```
 
-### Example 3: Ferroelectric Materials
+### Batch Processing
+For processing multiple queries:
+
 ```bash
-crystalyse analyze "lead-free ferroelectric with high polarization" --mode rigorous --view
+# Create a file with queries
+echo "Design a battery cathode" > queries.txt
+echo "Find superconducting materials" >> queries.txt
+echo "Suggest photovoltaic semiconductors" >> queries.txt
 
-# Or in shell:
-> Design lead-free ferroelectric materials for energy storage
-> /validate BiFeO3
-> /export computational-details
+# Process each query
+while read query; do
+  crystalyse analyze "$query" --output "result_$(date +%s).json"
+done < queries.txt
 ```
 
-### Example 4: High-Throughput Screening
+### Integration with Other Tools
 ```bash
-# From command line
-crystalyse analyze "screen titanium oxides for photocatalysis" --output photocatalysts.json
+# Pipe results to analysis tools
+crystalyse analyze "Design solar cell materials" --output - | jq '.composition'
 
-# In shell with criteria sets
-> /screen @solar_criteria titanium_compounds
-> /export csv screening_results.csv
+# Use with version control
+crystalyse analyze "Research query" --output results.json
+git add results.json
+git commit -m "Analysis results for research query"
 ```
 
-## Troubleshooting
+## 💡 Tips & Best Practices
+
+### Query Formulation
+
+#### ✅ Good Queries
+- **Specific application**: "Design a cathode for sodium-ion batteries"
+- **Clear constraints**: "Find lead-free ferroelectric materials"
+- **Property targets**: "Suggest semiconductors with bandgap around 1.5 eV"
+- **Synthesis constraints**: "Create materials synthesizable below 800°C"
+
+#### ❌ Avoid These
+- **Too vague**: "Find good materials"
+- **Contradictory**: "Find materials that are both insulating and conducting"
+- **Impossible constraints**: "Create room-temperature superconductors with infinite critical current"
+
+### Performance Optimization
+
+#### For Faster Results
+1. Use **creative mode** for exploration
+2. Ask **focused questions**
+3. Limit **property requirements**
+4. Use **streaming mode** for long analyses
+
+#### For Detailed Analysis
+1. Use **rigorous mode**
+2. Ask for **specific properties**
+3. Request **validation details**
+4. Include **synthesis considerations**
+
+### Session Organization
+```bash
+# Use descriptive export filenames
+/export battery_cathode_research_2024.json
+/export lead_free_ferroelectrics_study.json
+
+# Start new sessions for different projects
+# Exit and restart CLI for clean sessions
+```
+
+## 📝 Example Workflows
+
+### Workflow 1: Battery Material Design
+```bash
+# Start CrystaLyse.AI
+crystalyse
+
+# Set rigorous mode for accuracy
+/mode rigorous
+
+# Explore cathode materials
+> Design a high-capacity cathode for lithium-ion batteries with operating voltage above 4V
+
+# Analyze the results, then explore variations
+> Can you optimize the previous composition for better thermal stability?
+
+# View the structure
+/view
+
+# Export results
+/export li_battery_cathode_study.json
+```
+
+### Workflow 2: Novel Material Exploration
+```bash
+# Start in creative mode for exploration
+crystalyse
+
+/mode creative
+
+# Brainstorm novel concepts
+> What would happen if we combined the piezoelectric properties of quartz with the superconductivity of cuprates?
+
+> Can you design materials that change color under stress?
+
+# Switch to rigorous mode for feasibility
+/mode rigorous
+
+> Evaluate the thermodynamic stability of the color-changing material concept
+
+/export novel_materials_exploration.json
+```
+
+### Workflow 3: Research Validation
+```bash
+# One-time analysis with file output
+crystalyse analyze "Validate the stability of CsPbI3 perovskite for solar cells" \
+  --stream \
+  --output perovskite_validation.json
+
+# Review results
+cat perovskite_validation.json | jq '.analysis'
+```
+
+### Workflow 4: Educational Use
+```bash
+crystalyse
+
+# Start with examples
+/examples
+
+# Try a simple query
+> Explain why diamonds are hard but graphite is soft
+
+# Explore structure-property relationships
+> How does crystal structure affect electrical conductivity?
+
+# Interactive learning
+> Design a material to demonstrate the relationship between structure and properties
+```
+
+## 🔍 Advanced Query Examples
+
+### Property-Specific Queries
+```bash
+# Electrical properties
+> Find oxide materials with high ionic conductivity for solid electrolytes
+
+# Mechanical properties
+> Design lightweight but strong materials for aerospace applications
+
+# Optical properties
+> Suggest transparent conductors for flexible displays
+
+# Magnetic properties
+> Find materials with high magnetic anisotropy for data storage
+```
+
+### Application-Specific Queries
+```bash
+# Energy storage
+> Design electrode materials for next-generation batteries
+> Find electrolyte materials for fuel cells
+
+# Electronics
+> Suggest materials for high-frequency electronics
+> Design materials for quantum computing applications
+
+# Environmental
+> Find photocatalysts for water purification
+> Design materials for carbon capture and storage
+```
+
+### Constraint-Based Queries
+```bash
+# Synthesis constraints
+> Find materials that can be synthesized using solution processing
+> Design materials stable in ambient conditions
+
+# Cost constraints  
+> Suggest low-cost alternatives to indium tin oxide
+> Find earth-abundant materials for solar cells
+
+# Environmental constraints
+> Design non-toxic materials for biomedical applications
+> Find recyclable materials for sustainable electronics
+```
+
+## 🚨 Troubleshooting
 
 ### Common Issues
 
-#### 1. Python Bridge Connection Failed
-```
-Error: Python bridge connection timeout
-```
+#### API Key Issues
+```bash
+# Check status
+crystalyse status
 
-**Solutions:**
-- Ensure Python 3.8+ is installed: `python3 --version`
-- Check if CrystaLyse.AI modules are installed
-- Try running in demo mode (automatic fallback)
-- Verify firewall settings
-
-#### 2. Browser Won't Open for Visualization
-```
-Warning: Could not open browser
+# Should show ✅ Configured, not ❌ Missing
 ```
 
-**Solutions:**
-- Manual open: The CLI provides file paths you can open manually
-- Set default browser: `export BROWSER=firefox`
-- Try alternative viewers: `crystalyse view --inline` (if supported)
+#### Installation Issues
+```bash
+# Reinstall dependencies
+pip install -e ".[all]"
 
-#### 3. Command Not Recognized
-```
-Unknown command: /vieww
-```
-
-**Solutions:**
-- Check spelling: `/view` not `/vieww`
-- Use tab completion for commands
-- Type `/help` to see all available commands
-
-#### 4. Session Load Failed
-```
-Error: Session not found: my_session
+# Check Python version
+python --version  # Should be 3.10+
 ```
 
-**Solutions:**
-- List available sessions: `/load` (without arguments)
-- Check session directory: `~/.crystalyse/sessions/`
-- Verify file permissions
+#### Performance Issues
+```bash
+# Use creative mode for faster responses
+/mode creative
 
-#### 5. Export Failed
+# Check internet connection
+# Large models require stable connection
 ```
-Error: Export format not supported
-```
 
-**Solutions:**
-- Use supported formats: CIF, JSON, HTML, CSV
-- Check output directory permissions
-- Ensure disk space available
-
-### Getting Help
-
-1. **In-app help**: `/help` in shell or `crystalyse --help`
-2. **Examples**: Check the `examples/` directory
-3. **Logs**: Check `~/.crystalyse/logs/` for detailed error logs
-4. **GitHub**: Report issues at the project repository
-
-### Performance Tips
-
-1. **Caching**: Results are cached automatically - repeat queries are faster
-2. **Batch operations**: Use `/screen` for multiple similar queries
-3. **Session management**: Save sessions to avoid re-running long analyses
-4. **Close visualizations**: Close browser tabs to free memory
-
-### Demo Mode
-
-If CrystaLyse.AI modules aren't available, the CLI runs in demo mode:
-- Sample data for testing interface
-- All features work but with mock results
-- Perfect for learning the interface
-- Indicated by "Demo mode" messages
+For more troubleshooting help, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ---
-
-## Need More Help?
-
-- **Documentation**: Check the technical implementation report
-- **Examples**: See `examples/` directory for sample workflows
-- **Community**: Join the CrystaLyse.AI community for discussions
-- **Issues**: Report bugs or request features on GitHub
 
 Happy materials discovery! 🔬✨

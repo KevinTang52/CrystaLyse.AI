@@ -17,6 +17,7 @@ dependencies = [
     "asyncio>=3.4.3",
     "rich>=13.0.0",
     "click>=8.1.0",
+    "prompt-toolkit>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -39,8 +40,7 @@ all = [
 ]
 
 [project.scripts]
-crystalyse = "crystalyse.cli_launcher:main"
-crystalyse-old = "crystalyse.cli:main"
+crystalyse = "crystalyse.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

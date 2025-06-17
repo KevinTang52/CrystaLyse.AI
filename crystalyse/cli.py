@@ -7,31 +7,39 @@ features. The CLI supports both streaming and non-streaming analysis, result for
 and various output options.
 
 Key Features:
+    - Interactive shell with conversational interface (default)
     - Rich terminal output with formatted tables and panels
     - Streaming analysis with real-time progress display
     - JSON output export for integration with other tools
+    - Browser-based 3D structure visualization
+    - Session management with history and export
     - Example queries for quick start and demonstration
-    - Built-in SMACT MCP server management for testing
 
 Commands:
-    analyze: Perform materials discovery analysis on user queries
+    shell: Start interactive CrystaLyse.AI shell (default when no command given)
+    analyze: Perform one-time materials discovery analysis
     examples: Display example queries for reference
+    status: Show configuration and API status
     server: Start SMACT MCP server for testing and development
 
 Dependencies:
     - click: Command-line interface framework
     - rich: Rich text and beautiful formatting in terminal
+    - prompt-toolkit: Interactive shell with history and completion
     - asyncio: Asynchronous I/O support for agent integration
 
 Example Usage:
-    Basic analysis:
+    Interactive shell (default):
+        $ crystalyse
+    
+    Start shell explicitly:
+        $ crystalyse shell
+    
+    One-time analysis:
         $ crystalyse analyze "Design a battery cathode material"
     
     Streaming analysis with custom model:
         $ crystalyse analyze "Find multiferroic materials" --model gpt-4o --stream
-    
-    Save results to file:
-        $ crystalyse analyze "Photovoltaic semiconductors" -o results.json
     
     View example queries:
         $ crystalyse examples
@@ -47,12 +55,7 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .agents import CrystaLyseAgent
-from .config import get_agent_config, verify_rate_limits, DEFAULT_MODEL
-try:
-    from .models import CrystalAnalysisResult
-except ImportError:
-    # Handle case where models module might not exist
-    CrystalAnalysisResult = None
+from .config import verify_rate_limits, DEFAULT_MODEL
 
 console = Console()
 
@@ -323,6 +326,16 @@ def examples():
 
 
 @cli.command()
+def shell():
+    """Start CrystaLyse.AI interactive shell."""
+    from .interactive_shell import CrystaLyseShell
+    import asyncio
+    
+    shell = CrystaLyseShell()
+    asyncio.run(shell.start())
+
+
+@cli.command()
 def server():
     """Start the SMACT MCP server (for testing)."""
     console.print("[cyan]Starting SMACT MCP server...[/cyan]")
@@ -332,7 +345,15 @@ def server():
 
 def main():
     """Main entry point."""
-    cli()
+    # If no command provided, start interactive shell
+    import sys
+    if len(sys.argv) == 1:
+        from .interactive_shell import CrystaLyseShell
+        import asyncio
+        shell = CrystaLyseShell()
+        asyncio.run(shell.start())
+    else:
+        cli()
 
 
 if __name__ == "__main__":
