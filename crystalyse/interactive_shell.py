@@ -42,9 +42,8 @@ from rich.syntax import Syntax
 from rich.columns import Columns
 from rich.text import Text
 
-from .agents import CrystaLyseAgent
-from .config import get_agent_config, verify_rate_limits, DEFAULT_MODEL
-from .visualization.crystal_viz import generate_crystal_viewer
+from .unified_agent import CrystaLyseUnifiedAgent, AgentConfig
+from .config import config
 
 
 BANNER = """
@@ -88,21 +87,28 @@ BASIC USAGE:
     "Create a multiferroic material"
 
 ANALYSIS MODES:
-  • rigorous  - Detailed scientific analysis with validation (default)
-  • creative  - Faster exploration with novel ideas
+  • rigorous  - SMACT validation + MACE energy calculations + structure generation
+  • creative  - AI-driven exploration with chemical intuition only
   
   Switch modes with: /mode creative  or  /mode rigorous
 
 COMMANDS:
-  /help           - Show this help message
-  /mode [MODE]    - Set analysis mode (creative/rigorous)
-  /view           - Open last structure in 3D browser viewer
-  /export [FILE]  - Export session to JSON file
-  /history        - Show your analysis history
-  /clear          - Clear the screen
-  /status         - Show API and system status
-  /examples       - Show example queries
-  /exit           - Exit the shell
+  /help              - Show this help message
+  /mode [MODE]       - Set analysis mode (creative/rigorous)
+  /view [FORMULA]    - Open structure viewer in browser
+                       Without formula: shows latest structures
+                       With formula: shows specific composition (e.g., /view CaTiO3)
+  /export [FILE]     - Export session to JSON file
+  /history           - Show your analysis history
+  /clear             - Clear the screen
+  /status            - Show API and system status
+  /examples          - Show example queries
+  /exit              - Exit the shell
+
+STRUCTURE VIEWING:
+  • /view            - View latest generated structures
+  • /view CuInSe2    - View structures for specific composition
+  • Auto-regenerates structures if needed using Chemeleon CSP
 
 TIPS:
   • Be specific about the application (batteries, solar cells, etc.)
@@ -110,6 +116,7 @@ TIPS:
   • Use Ctrl+C to interrupt long analyses
   • Up/down arrows browse command history
   • Tab completion works for commands
+  • Rigorous mode saves CIF files and generates HTML visualizations
 """
 
 EXAMPLE_QUERIES = [
@@ -139,11 +146,16 @@ class CrystaLyseShell:
         self.history_file = Path.home() / '.crystalyse_history'
         self.history = FileHistory(str(self.history_file))
         self.mode = 'rigorous'
-        self.current_structure = None
+        self.current_structures = []  # Store multiple structures
+        self.current_compositions = []  # Store compositions from latest analysis
         self.current_result = None
         self.session_history: List[Dict[str, Any]] = []
-        self.agent: Optional[CrystaLyseAgent] = None
+        self.agent: Optional[CrystaLyseUnifiedAgent] = None
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Simplified for unified agent (no visualization dependencies for now)
+        # self.storage = StructureStorage(Path.cwd() / "crystalyse_storage")
+        # self.visualizer = CrystalVisualizer(backend="py3dmol")
         
         # Command completer
         commands = [
@@ -153,20 +165,40 @@ class CrystaLyseShell:
         self.completer = WordCompleter(commands + EXAMPLE_QUERIES)
         
     async def initialize_agent(self) -> bool:
-        """Initialize the CrystaLyse agent."""
-        api_key = os.getenv("OPENAI_MDG_API_KEY") or os.getenv("OPENAI_API_KEY")
+        """Initialize the unified CrystaLyse agent."""
+        api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             self.console.print("[red]❌ Error: OpenAI API key not found![/red]")
-            self.console.print("Set OPENAI_MDG_API_KEY or OPENAI_API_KEY environment variable.")
+            self.console.print("Set OPENAI_API_KEY environment variable.")
             return False
             
         try:
-            self.agent = CrystaLyseAgent(model=DEFAULT_MODEL, temperature=0.7)
-            if hasattr(self.agent, 'set_mode'):
-                self.agent.set_mode(self.mode)
+            # Configure agent based on mode
+            if self.mode == 'rigorous':
+                agent_config = AgentConfig(
+                    model="o4-mini",
+                    mode="rigorous",
+                    temperature=0.3,
+                    enable_smact=True,
+                    enable_chemeleon=True,
+                    enable_mace=True,
+                    max_turns=20
+                )
+            else:  # creative mode
+                agent_config = AgentConfig(
+                    model="o4-mini",
+                    mode="creative", 
+                    temperature=0.7,
+                    enable_smact=False,  # Knowledge-based only
+                    enable_chemeleon=False,
+                    enable_mace=False,
+                    max_turns=15
+                )
+            
+            self.agent = CrystaLyseUnifiedAgent(agent_config)
             return True
         except Exception as e:
-            self.console.print(f"[red]❌ Error initializing agent: {e}[/red]")
+            self.console.print(f"[red]❌ Error initializing unified agent: {e}[/red]")
             return False
     
     async def start(self):
@@ -222,18 +254,32 @@ class CrystaLyseShell:
             if len(parts) > 1:
                 new_mode = parts[1].lower()
                 if new_mode in ['creative', 'rigorous']:
-                    self.mode = new_mode
-                    if self.agent and hasattr(self.agent, 'set_mode'):
-                        self.agent.set_mode(self.mode)
-                    self.console.print(f"[green]✅ Mode set to: {self.mode}[/green]")
+                    if new_mode != self.mode:
+                        self.mode = new_mode
+                        # Reinitialize agent with new mode settings
+                        self.console.print(f"[yellow]🔄 Switching to {self.mode} mode...[/yellow]")
+                        if await self.initialize_agent():
+                            self.console.print(f"[green]✅ Mode set to: {self.mode}[/green]")
+                            if self.mode == 'rigorous':
+                                self.console.print("[cyan]📊 Rigorous mode: SMACT validation + MACE energy calculations enabled[/cyan]")
+                            else:
+                                self.console.print("[cyan]🎨 Creative mode: AI-driven exploration with chemical intuition[/cyan]")
+                        else:
+                            self.console.print("[red]❌ Failed to initialize agent for new mode[/red]")
+                    else:
+                        self.console.print(f"[yellow]Already in {self.mode} mode[/yellow]")
                 else:
                     self.console.print("[red]❌ Invalid mode. Use 'creative' or 'rigorous'[/red]")
             else:
                 self.console.print(f"[cyan]Current mode: {self.mode}[/cyan]")
-                self.console.print("Available modes: creative, rigorous")
+                self.console.print("Available modes:")
+                self.console.print("  • rigorous - SMACT validation + MACE energy calculations")
+                self.console.print("  • creative - AI-driven exploration with chemical intuition")
                 
         elif cmd == '/view':
-            await self.view_structure()
+            # Handle optional composition argument
+            composition = parts[1] if len(parts) > 1 else None
+            await self.view_structure(composition)
             
         elif cmd == '/export':
             filename = parts[1] if len(parts) > 1 else f"crystalyse_session_{self.session_id}.json"
@@ -287,7 +333,7 @@ class CrystaLyseShell:
             ) as progress:
                 task = progress.add_task(f"Analyzing query in {self.mode} mode...", total=None)
                 
-                result = await self.agent.analyze(query)
+                result = await self.agent.discover_materials(query, trace_workflow=False)
                 progress.remove_task(task)
                 
             # Store results
@@ -315,138 +361,225 @@ class CrystaLyseShell:
                 self.console.print(f"[dim]Traceback: {traceback.format_exc()}[/dim]")
     
     async def display_results(self, result):
-        """Display analysis results in formatted tables."""
+        """Display analysis results from unified agent."""
         if not result:
             self.console.print("[yellow]⚠️ No results returned[/yellow]")
             return
-            
-        # Handle different result types
-        if isinstance(result, str):
-            # If result is a string, try to parse as JSON or display as text
-            try:
-                import json
-                result = json.loads(result)
-            except (json.JSONDecodeError, TypeError):
-                # Display as plain text
+        
+        # Handle unified agent response format
+        if isinstance(result, dict):
+            if result.get('status') == 'completed':
+                discovery_result = result.get('discovery_result', '')
                 self.console.print(Panel(
-                    result, 
-                    title="📊 Analysis Results", 
+                    str(discovery_result), 
+                    title="✅ Materials Discovery Results", 
                     border_style="green"
                 ))
-                return
-        
-        if not isinstance(result, dict):
-            # If it's not a dict, convert to string and display
+                
+                # Display metrics
+                metrics = result.get('metrics', {})
+                if metrics:
+                    self.console.print(f"\n[dim]⚡ Completed in {metrics.get('elapsed_time', 0):.2f}s using {metrics.get('model', 'unknown')} in {metrics.get('mode', 'unknown')} mode[/dim]")
+                    
+            elif result.get('status') == 'failed':
+                error_msg = result.get('error', 'Unknown error')
+                self.console.print(Panel(
+                    f"❌ Analysis failed: {error_msg}", 
+                    title="Error", 
+                    border_style="red"
+                ))
+            else:
+                # Fallback display
+                self.console.print(Panel(
+                    str(result), 
+                    title="📊 Analysis Results", 
+                    border_style="yellow"
+                ))
+        else:
+            # String result
             self.console.print(Panel(
                 str(result), 
                 title="📊 Analysis Results", 
                 border_style="green"
             ))
-            return
             
-        # Main results table
-        results_table = Table(title="🔬 Analysis Results")
-        results_table.add_column("Property", style="cyan")
-        results_table.add_column("Value", style="green")
+    async def _extract_and_store_structures(self, result_text: str):
+        """Extract structures and compositions from agent result text."""
+        import re
         
-        # Handle different result structures
-        if 'composition' in result:
-            results_table.add_row("Composition", str(result['composition']))
-        elif 'formula' in result:
-            results_table.add_row("Formula", str(result['formula']))
-            
-        if 'properties' in result and isinstance(result['properties'], dict):
-            for prop, value in result['properties'].items():
-                results_table.add_row(prop.replace('_', ' ').title(), str(value))
-                
-        if 'confidence' in result:
-            try:
-                confidence = float(result['confidence'])
-                conf_style = "green" if confidence > 0.8 else "yellow" if confidence > 0.6 else "red"
-                results_table.add_row("Confidence", f"[{conf_style}]{confidence:.2%}[/{conf_style}]")
-            except (ValueError, TypeError):
-                results_table.add_row("Confidence", str(result['confidence']))
+        # Try to extract compositions from the text
+        # Look for common chemical formula patterns
+        composition_patterns = [
+            r'\b([A-Z][a-z]?(?:\d+)?(?:[A-Z][a-z]?(?:\d+)?)*)\b',  # Basic chemical formulas
+            r'#### \d+\.\s*([A-Z][a-z]?\d*(?:[A-Z][a-z]?\d*)*)',  # Numbered section headers
+            r'(?:formula|composition|compound)[:=\s]+([A-Z][a-z]?\d*(?:[A-Z][a-z]?\d*)*)',  # Explicit mentions
+        ]
         
-        # Handle top_candidates structure (common in CrystaLyse results)
-        if 'top_candidates' in result and isinstance(result['top_candidates'], list):
-            for i, candidate in enumerate(result['top_candidates'][:3]):  # Show top 3
-                if isinstance(candidate, dict):
-                    formula = candidate.get('formula', f'Candidate {i+1}')
-                    validation = candidate.get('validation', 'unknown')
-                    results_table.add_row(f"Candidate {i+1}", f"{formula} ({validation})")
-            
-        self.console.print(results_table)
+        found_compositions = set()
+        for pattern in composition_patterns:
+            matches = re.findall(pattern, result_text, re.IGNORECASE)
+            for match in matches:
+                # Filter out common false positives
+                if (len(match) >= 2 and 
+                    not match.isdigit() and 
+                    any(c.isupper() for c in match) and
+                    match not in ['PDF', 'CSP', 'DFT', 'MACE', 'CIF', 'API']):
+                    found_compositions.add(match)
         
-        # Analysis text
-        analysis_text = None
-        if 'analysis' in result:
-            analysis_text = result['analysis']
-        elif 'generation_summary' in result:
-            summary = result['generation_summary']
-            analysis_text = f"Generated {summary.get('total_generated', 0)} structures, {summary.get('valid', 0)} valid"
+        # Filter to likely chemical compositions
+        valid_compositions = []
+        for comp in found_compositions:
+            if self._is_likely_composition(comp):
+                valid_compositions.append(comp)
         
-        if analysis_text:
-            self.console.print(Panel(
-                str(analysis_text), 
-                title="📊 Detailed Analysis", 
-                border_style="green"
-            ))
-            
-        # Recommendations
-        recommendations = None
-        if 'recommendations' in result and result['recommendations']:
-            recommendations = result['recommendations']
-        elif 'top_candidates' in result and result['top_candidates']:
-            # Extract reasoning from top candidates
-            recommendations = []
-            for candidate in result['top_candidates'][:3]:
-                if isinstance(candidate, dict) and 'reasoning' in candidate:
-                    recommendations.append(candidate['reasoning'])
+        self.current_compositions = valid_compositions[:5]  # Limit to 5
         
-        if recommendations:
-            if isinstance(recommendations, list):
-                rec_text = "\n".join(f"• {rec}" for rec in recommendations if rec)
-            else:
-                rec_text = str(recommendations)
-            
-            if rec_text.strip():
-                self.console.print(Panel(
-                    rec_text, 
-                    title="💡 Recommendations", 
-                    border_style="yellow"
-                ))
-            
-        # Structure info - look for CIF data in various places
-        structure_found = False
-        if 'structure' in result:
-            self.current_structure = result['structure']
-            structure_found = True
-        elif 'top_candidates' in result and result['top_candidates']:
-            # Look for CIF in top candidate
-            for candidate in result['top_candidates']:
-                if isinstance(candidate, dict) and 'proposed_structures' in candidate:
-                    structures = candidate['proposed_structures']
-                    if structures and isinstance(structures, list) and len(structures) > 0:
-                        if 'cif' in structures[0]:
-                            self.current_structure = structures[0]['cif']
-                            structure_found = True
-                            break
+        # Try to extract CIF data if present in the result
+        # Look for CIF-like content or structure data
+        cif_pattern = r'data_\w+\s+_cell_length_a\s+[\d\.]+'
         
-        if structure_found:
-            self.console.print(f"\n[cyan]💎 Crystal structure generated! Use /view to visualize in 3D[/cyan]")
+        if re.search(cif_pattern, result_text, re.DOTALL):
+            # Direct CIF content found
+            cif_matches = re.findall(r'(data_\w+.*?)(?=data_\w+|\Z)', result_text, re.DOTALL)
+            for i, cif_content in enumerate(cif_matches):
+                if len(self.current_compositions) > i:
+                    structure_dict = {
+                        'cif': cif_content.strip(),
+                        'formula': self.current_compositions[i],
+                        'structure': {},  # Would need proper parsing for MACE
+                        'analysis': self._extract_structure_analysis(result_text, i)
+                    }
+                    self.current_structures.append(structure_dict)
+        else:
+            # No direct CIF, but we have compositions - try to generate placeholder structures
+            # This will allow the /view command to work by regenerating structures
+            for comp in self.current_compositions:
+                structure_dict = {
+                    'composition': comp,
+                    'formula': comp,
+                    'placeholder': True,  # Mark as placeholder
+                    'analysis': self._extract_structure_analysis(result_text, len(self.current_structures))
+                }
+                self.current_structures.append(structure_dict)
+        
+        # Store structures if we have any
+        if self.current_structures and self.current_compositions:
+            await self._store_extracted_structures()
     
-    async def view_structure(self):
-        """Open the current structure in a browser viewer."""
-        if not self.current_structure:
-            self.console.print("[yellow]⚠️ No structure available. Run an analysis first.[/yellow]")
-            return
-            
+    def _is_likely_composition(self, comp: str) -> bool:
+        """Check if string is likely a chemical composition."""
+        if len(comp) < 2 or len(comp) > 15:
+            return False
+        
+        # Must start with uppercase
+        if not comp[0].isupper():
+            return False
+        
+        # Must have at least one more element (another uppercase letter)
+        if not any(c.isupper() for c in comp[1:]):
+            return False
+        
+        # Common element symbols
+        elements = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu']
+        
+        # Extract potential element symbols
+        import re
+        potential_elements = re.findall(r'[A-Z][a-z]?', comp)
+        valid_elements = sum(1 for elem in potential_elements if elem in elements)
+        
+        return valid_elements >= len(potential_elements) * 0.7  # At least 70% valid elements
+    
+    def _extract_structure_analysis(self, text: str, structure_index: int) -> Dict:
+        """Extract structure analysis from text."""
+        # Look for lattice parameters, space group, etc.
+        import re
+        
+        analysis = {}
+        
+        # Try to find space group
+        sg_pattern = r'Space Group:\s*(\w+)'
+        sg_matches = re.findall(sg_pattern, text)
+        if len(sg_matches) > structure_index:
+            analysis['space_group'] = sg_matches[structure_index]
+        
+        # Try to find lattice parameters
+        lattice_pattern = r'a\s*=\s*([\d\.]+)\s*Å.*?b\s*=\s*([\d\.]+)\s*Å.*?c\s*=\s*([\d\.]+)\s*Å'
+        lattice_matches = re.findall(lattice_pattern, text, re.DOTALL)
+        if len(lattice_matches) > structure_index:
+            a, b, c = lattice_matches[structure_index]
+            analysis['lattice'] = {'a': float(a), 'b': float(b), 'c': float(c)}
+        
+        return analysis
+    
+    async def _store_extracted_structures(self):
+        """Store extracted structures using the storage system."""
         try:
+            for i, comp in enumerate(self.current_compositions):
+                if i < len(self.current_structures):
+                    structures_for_comp = [self.current_structures[i]]
+                    
+                    # Store structures
+                    self.storage.store_structures(
+                        composition=comp,
+                        structures=structures_for_comp,
+                        analysis_params={
+                            'model': self.agent.model if self.agent else 'unknown',
+                            'mode': self.mode,
+                            'session_id': self.session_id,
+                            'temperature': self.agent.temperature if self.agent else 0.7
+                        },
+                        session_id=self.session_id
+                    )
+                    
+                    # Generate HTML report if we have actual structure data
+                    if not structures_for_comp[0].get('placeholder', False):
+                        html_content = self.visualizer.create_multi_structure_report(
+                            structures_for_comp, comp
+                        )
+                        self.storage.store_visualization_report(comp, html_content)
+                    
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️ Warning: Could not store structures: {e}[/yellow]")
+    
+    async def view_structure(self, composition: str = None):
+        """Open structure viewer for specified composition or latest structures."""
+        try:
+            # Determine which structures to view
+            if composition:
+                # View specific composition
+                structures = self.storage.get_structures_for_composition(composition)
+                if not structures:
+                    self.console.print(f"[yellow]⚠️ No structures found for {composition}[/yellow]")
+                    # Try to regenerate structures for this composition
+                    await self._regenerate_structures_for_composition(composition)
+                    return
+                target_composition = composition
+            else:
+                # View latest structures from current session
+                if not self.current_compositions:
+                    self.console.print("[yellow]⚠️ No structures available. Run an analysis first.[/yellow]")
+                    return
+                
+                # Use the first composition from the latest analysis
+                target_composition = self.current_compositions[0]
+                structures = self.storage.get_structures_for_composition(target_composition)
+                
+                if not structures and self.current_structures:
+                    # Use in-memory structures if storage doesn't have them yet
+                    structures = [s for s in self.current_structures if s.get('composition') == target_composition or s.get('formula') == target_composition]
+            
+            if not structures:
+                self.console.print("[yellow]⚠️ No structure data available for visualization.[/yellow]")
+                return
+            
+            # Check if we need to regenerate structures (if they're placeholders)
+            structure_to_view = structures[0]
+            if structure_to_view.get('placeholder', False) or 'cif' not in structure_to_view:
+                await self._regenerate_structures_for_composition(target_composition)
+                return
+            
             # Generate HTML viewer
-            html_content = generate_crystal_viewer(
-                self.current_structure, 
-                self.current_result.get('composition', 'Unknown') if self.current_result else 'Unknown'
-            )
+            html_content = self._generate_structure_viewer(structures, target_composition)
             
             # Save to temporary file and open
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
@@ -454,11 +587,62 @@ class CrystaLyseShell:
                 temp_path = f.name
                 
             webbrowser.open(f'file://{temp_path}')
-            self.console.print(f"[green]✅ Structure viewer opened in browser[/green]")
-            self.console.print(f"[dim]Temporary file: {temp_path}[/dim]")
+            self.console.print(f"[green]✅ Structure viewer opened in browser for {target_composition}[/green]")
+            self.console.print(f"[dim]Structures: {len(structures)} | File: {temp_path}[/dim]")
             
         except Exception as e:
             self.console.print(f"[red]❌ Error opening structure viewer: {e}[/red]")
+            import traceback
+            if os.getenv("CRYSTALYSE_DEBUG", "false").lower() == "true":
+                self.console.print(f"[dim]Traceback: {traceback.format_exc()}[/dim]")
+    
+    async def _regenerate_structures_for_composition(self, composition: str):
+        """Regenerate crystal structures for a specific composition."""
+        self.console.print(f"[yellow]🔄 Generating crystal structures for {composition}...[/yellow]")
+        
+        try:
+            # Use Chemeleon to generate structures directly
+            query = f"Generate 3 crystal structures for {composition} using Chemeleon CSP tools. Include CIF data for visualization."
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                task = progress.add_task(f"Generating structures for {composition}...", total=None)
+                
+                # Run the agent to generate structures
+                result = await self.agent.analyze(query)
+                progress.remove_task(task)
+            
+            # Extract CIF data from the result
+            await self._extract_and_store_structures(result)
+            
+            # Try to view the structures again
+            structures = self.storage.get_structures_for_composition(composition)
+            if structures and not structures[0].get('placeholder', False):
+                html_content = self._generate_structure_viewer(structures, composition)
+                
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+                    f.write(html_content)
+                    temp_path = f.name
+                    
+                webbrowser.open(f'file://{temp_path}')
+                self.console.print(f"[green]✅ Structure viewer opened for {composition}[/green]")
+            else:
+                self.console.print(f"[yellow]⚠️ Could not generate viewable structures for {composition}[/yellow]")
+                
+        except Exception as e:
+            self.console.print(f"[red]❌ Error generating structures: {e}[/red]")
+    
+    def _generate_structure_viewer(self, structures: List[Dict], composition: str) -> str:
+        """Generate HTML viewer for structures."""
+        if len(structures) == 1 and 'cif' in structures[0]:
+            # Single structure - use simple viewer
+            return generate_crystal_viewer(structures[0]['cif'], composition)
+        else:
+            # Multiple structures - use comprehensive report
+            return self.visualizer.create_multi_structure_report(structures, composition)
     
     async def export_session(self, filename: str):
         """Export the current session to a JSON file."""
@@ -516,20 +700,44 @@ class CrystaLyseShell:
         api_status = "✅ Connected" if rate_limits["mdg_api_configured"] else "❌ Not configured"
         status_table.add_row("API Connection", api_status)
         
-        # Agent status
-        agent_status = "✅ Ready" if self.agent else "❌ Not initialized"
-        status_table.add_row("Analysis Agent", agent_status)
+        # Agent status and configuration
+        if self.agent:
+            config = self.agent.get_agent_configuration()
+            mode_desc = f"🔬 {self.mode}"
+            if config.get('use_chem_tools'):
+                mode_desc += " + SMACT"
+            if config.get('enable_mace'):
+                mode_desc += " + MACE"
+            status_table.add_row("Analysis Agent", "✅ Ready")
+            status_table.add_row("Current Mode", mode_desc)
+        else:
+            status_table.add_row("Analysis Agent", "❌ Not initialized")
+            status_table.add_row("Current Mode", f"🔬 {self.mode}")
         
         # Session info
-        status_table.add_row("Current Mode", f"🔬 {self.mode}")
         status_table.add_row("Session ID", self.session_id)
         status_table.add_row("Queries This Session", str(len(self.session_history)))
         
-        # Structure status
-        structure_status = "✅ Available" if self.current_structure else "⚪ None"
-        status_table.add_row("Current Structure", structure_status)
+        # Structure storage status
+        storage_stats = self.storage.get_storage_stats()
+        status_table.add_row("Stored Compositions", str(storage_stats['total_compositions']))
+        status_table.add_row("Total Structures", str(storage_stats['total_structures']))
+        status_table.add_row("CIF Files", str(storage_stats['total_cif_files']))
+        
+        # Current session structures
+        current_structures = len(self.current_structures) if self.current_structures else 0
+        current_comps = len(self.current_compositions) if self.current_compositions else 0
+        status_table.add_row("Current Structures", f"{current_structures} structures, {current_comps} compositions")
         
         self.console.print(status_table)
+        
+        # Show available compositions if any
+        if storage_stats['compositions']:
+            comp_text = ", ".join(storage_stats['compositions'][-5:])  # Show last 5
+            if len(storage_stats['compositions']) > 5:
+                comp_text = f"...{comp_text} (showing latest 5)"
+            self.console.print(f"\n[cyan]📁 Available compositions: {comp_text}[/cyan]")
+            self.console.print("[dim]Use /view [composition] to visualize specific structures[/dim]")
     
     def show_examples(self):
         """Display example queries."""

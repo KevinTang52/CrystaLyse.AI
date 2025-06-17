@@ -1,11 +1,26 @@
-"""CrystaLyse agents for materials discovery."""
+"""
+CrystaLyse.AI Agent Module
 
-from .main_agent import CrystaLyseAgent
-from .validation_agent import ValidationAgent
-from .structure_agent import StructurePredictionAgent
+This module provides the unified materials discovery agent using OpenAI Agents SDK.
+All legacy agent implementations have been consolidated into a single, efficient agent.
+"""
+
+from ..unified_agent import (
+    CrystaLyseUnifiedAgent, 
+    AgentConfig,
+    analyze_materials,
+    rigorous_analysis, 
+    creative_analysis
+)
+
+# For backward compatibility, alias the unified agent as the main agent
+CrystaLyseAgent = CrystaLyseUnifiedAgent
 
 __all__ = [
-    "CrystaLyseAgent",
-    "ValidationAgent", 
-    "StructurePredictionAgent",
+    "CrystaLyseUnifiedAgent",
+    "CrystaLyseAgent",  # Backward compatibility alias
+    "AgentConfig",
+    "analyze_materials",
+    "rigorous_analysis",
+    "creative_analysis"
 ]

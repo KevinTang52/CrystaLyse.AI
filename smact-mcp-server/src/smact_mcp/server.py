@@ -6,9 +6,8 @@ import asyncio
 import logging
 from pathlib import Path
 
-# Add the SMACT library to the path
-SMACT_PATH = Path(__file__).parent.parent.parent.parent / "smact"
-sys.path.insert(0, str(SMACT_PATH))
+# SMACT should be properly installed in the environment
+# If running in development, ensure SMACT is in PYTHONPATH or installed via pip
 
 from mcp.server.fastmcp import FastMCP
 

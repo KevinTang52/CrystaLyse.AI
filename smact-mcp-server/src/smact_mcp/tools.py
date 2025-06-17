@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any
 # Import SMACT modules
 import smact
 from smact import Element, neutral_ratios
-from smact.screening import smact_validity, pauling_test
+from smact.screening import smact_validity, pauling_test, smact_filter
 from smact.utils.composition import parse_formula
 try:
     from smact.metallicity import metallicity_score
@@ -19,7 +19,7 @@ from .server import mcp
 @mcp.tool(
     description="Check if a composition is valid according to SMACT rules"
 )
-def check_smact_validity(
+def smact_validity(
     composition: str,
     use_pauling_test: bool = True,
     include_alloys: bool = True,
@@ -349,4 +349,135 @@ def test_pauling_rule(
             "error": str(e),
             "elements": elements,
             "oxidation_states": oxidation_states
+        }, indent=2)
+
+
+@mcp.tool(
+    description="Generate and validate compositions using SMACT screening"
+)
+def generate_compositions(
+    elements: List[str],
+    threshold: int = 8,
+    oxidation_states_set: str = "icsd24",
+    species_unique: bool = True
+) -> str:
+    """
+    Generate chemically valid compositions from a list of elements using SMACT.
+    
+    Args:
+        elements: List of element symbols (e.g., ["Li", "Fe", "P", "O"])
+        threshold: Maximum stoichiometric coefficient (default: 8)
+        oxidation_states_set: Which oxidation states to use ("icsd24", "smact14", etc.)
+        species_unique: Whether to consider oxidation states as unique species
+    
+    Returns:
+        JSON string with valid compositions and their details
+    """
+    try:
+        # Convert to Element objects
+        smact_elements = tuple(Element(el) for el in elements)
+        
+        # Generate valid compositions
+        valid_compositions = smact_filter(
+            smact_elements,
+            threshold=threshold,
+            oxidation_states_set=oxidation_states_set,
+            species_unique=species_unique
+        )
+        
+        # Format results for better readability
+        formatted_compositions = []
+        for i, comp in enumerate(valid_compositions[:20]):  # Limit to first 20
+            if species_unique:
+                symbols, ox_states, ratios = comp
+                formula = ""
+                for sym, ratio in zip(symbols, ratios):
+                    if ratio == 1:
+                        formula += sym
+                    else:
+                        formula += f"{sym}{ratio}"
+                
+                formatted_compositions.append({
+                    "formula": formula,
+                    "elements": list(symbols),
+                    "oxidation_states": list(ox_states),
+                    "ratios": list(ratios),
+                    "charge_check": sum(ox * ratio for ox, ratio in zip(ox_states, ratios))
+                })
+            else:
+                symbols, ratios = comp
+                formula = ""
+                for sym, ratio in zip(symbols, ratios):
+                    if ratio == 1:
+                        formula += sym
+                    else:
+                        formula += f"{sym}{ratio}"
+                
+                formatted_compositions.append({
+                    "formula": formula,
+                    "elements": list(symbols),
+                    "ratios": list(ratios)
+                })
+        
+        result = {
+            "input_elements": elements,
+            "total_compositions_found": len(valid_compositions),
+            "compositions_shown": len(formatted_compositions),
+            "valid_compositions": formatted_compositions,
+            "settings": {
+                "threshold": threshold,
+                "oxidation_states_set": oxidation_states_set,
+                "species_unique": species_unique
+            }
+        }
+        
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "error": str(e),
+            "input_elements": elements,
+            "valid_compositions": []
+        }, indent=2)
+
+
+@mcp.tool(
+    description="Quick validation check for a single composition"
+)
+def quick_validity_check(composition: str) -> str:
+    """
+    Quick validation of a composition using SMACT with natural language response.
+    
+    Args:
+        composition: Chemical formula (e.g., "LiFePO4")
+    
+    Returns:
+        JSON string with validation result and explanation
+    """
+    try:
+        # Test with SMACT validity function
+        is_valid = smact_validity(composition, use_pauling_test=True, include_alloys=True)
+        
+        # Parse composition for additional info
+        from pymatgen.core import Composition
+        comp = Composition(composition)
+        
+        result = {
+            "composition": composition,
+            "is_valid": is_valid,
+            "validation_method": "SMACT screening (charge neutrality + Pauling test)",
+            "explanation": f"{composition} {'passes' if is_valid else 'fails'} SMACT validation. "
+                          f"This includes charge neutrality and electronegativity criteria.",
+            "elements": list(comp.as_dict().keys()),
+            "element_counts": {k: int(v) for k, v in comp.as_dict().items()}
+        }
+        
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "composition": composition,
+            "is_valid": False,
+            "error": str(e),
+            "explanation": f"Could not validate {composition}: {str(e)}"
         }, indent=2)

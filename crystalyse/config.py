@@ -1,125 +1,117 @@
-"""
-CrystaLyse.AI Configuration Module
-
-Centralized configuration for API keys, model settings, and high-performance parameters.
-Ensures all agents use the MDG API key for higher rate limits.
-"""
+"""Central configuration management for CrystaLyse.AI"""
 
 import os
-from typing import Optional
-import logging
+from pathlib import Path
+from typing import Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
-
-# Default model configuration optimized for high-performance operations
-DEFAULT_MODEL = "gpt-4o"
-DEFAULT_TEMPERATURE = 0.7
-
-# Rate limits for different models
-RATE_LIMITS = {
-    "gpt-4o": {
-        "tokens_per_minute": 2_000_000,      # 2M TPM
-        "requests_per_minute": 10_000,       # 10K RPM  
-        "tokens_per_day": 200_000_000,       # 200M TPD
-    },
-    "o4-mini": {
-        "tokens_per_minute": 10_000_000,     # 10M TPM (!)
-        "requests_per_minute": 10_000,       # 10K RPM
-        "tokens_per_day": 1_000_000_000,     # 1B TPD (!!)
-    }
-}
-
-# For backward compatibility
-MDG_RATE_LIMITS = RATE_LIMITS["gpt-4o"]
-
-def configure_openai_client():
-    """
-    Configure OpenAI client with MDG API key for high rate limits.
+class CrystaLyseConfig:
+    """Central configuration management with environment variable support"""
     
-    Returns:
-        bool: True if MDG API key is configured, False otherwise
-    """
-    try:
-        import openai
+    def __init__(self):
+        self.base_dir = Path(__file__).parent.parent
+        self.load_from_env()
+    
+    def load_from_env(self):
+        """Load configuration from environment variables with sensible defaults"""
         
-        # Use only MDG API key for high rate limits
-        mdg_api_key = os.getenv("OPENAI_MDG_API_KEY")
-        if mdg_api_key:
-            # Set for both old and new OpenAI client versions
-            openai.api_key = mdg_api_key
+        # MCP Server Configurations
+        self.mcp_servers = {
+            "smact": {
+                "command": os.getenv("SMACT_MCP_COMMAND", "python"),
+                "args": os.getenv("SMACT_MCP_ARGS", "-m smact_mcp").split(),
+                "cwd": os.getenv("SMACT_MCP_PATH", str(self.base_dir / "smact-mcp-server"))
+            },
+            "chemeleon": {
+                "command": os.getenv("CHEMELEON_MCP_COMMAND", "python"),
+                "args": os.getenv("CHEMELEON_MCP_ARGS", "-m chemeleon_mcp").split(),
+                "cwd": os.getenv("CHEMELEON_MCP_PATH", str(self.base_dir / "chemeleon-mcp-server"))
+            },
+            "mace": {
+                "command": os.getenv("MACE_MCP_COMMAND", "python"),
+                "args": os.getenv("MACE_MCP_ARGS", "-m mace_mcp").split(),
+                "cwd": os.getenv("MACE_MCP_PATH", str(self.base_dir / "mace-mcp-server"))
+            }
+        }
+        
+        # Agent Configuration
+        self.default_model = os.getenv("CRYSTALYSE_MODEL", "claude-3-5-sonnet-20241022")
+        self.default_temperature = float(os.getenv("CRYSTALYSE_TEMPERATURE", "0.7"))
+        self.max_turns = int(os.getenv("CRYSTALYSE_MAX_TURNS", "10"))
+        
+        # Performance Configuration
+        self.parallel_batch_size = int(os.getenv("CRYSTALYSE_BATCH_SIZE", "10"))
+        self.max_candidates = int(os.getenv("CRYSTALYSE_MAX_CANDIDATES", "100"))
+        self.structure_samples = int(os.getenv("CRYSTALYSE_STRUCTURE_SAMPLES", "5"))
+        
+        # Development Configuration
+        self.enable_metrics = os.getenv("CRYSTALYSE_METRICS", "true").lower() == "true"
+        self.debug_mode = os.getenv("CRYSTALYSE_DEBUG", "false").lower() == "true"
+        
+    def get_server_config(self, server_name: str) -> Dict[str, Any]:
+        """Get MCP server configuration with validation"""
+        if server_name not in self.mcp_servers:
+            raise ValueError(f"Unknown server: {server_name}. Available: {list(self.mcp_servers.keys())}")
             
-            # CRITICAL: Force agents package to use MDG key by setting OPENAI_API_KEY to MDG key
-            os.environ["OPENAI_API_KEY"] = mdg_api_key
+        config = self.mcp_servers[server_name].copy()
+        
+        # Ensure the working directory exists
+        cwd_path = Path(config["cwd"])
+        if not cwd_path.exists():
+            raise FileNotFoundError(f"MCP server directory not found: {cwd_path}")
             
-            logger.info("✅ Using OPENAI_MDG_API_KEY - High rate limits enabled")
-            logger.info(f"📊 Rate limits: {MDG_RATE_LIMITS['tokens_per_minute']:,} TPM, {MDG_RATE_LIMITS['requests_per_minute']:,} RPM")
-            logger.info("🔄 Set OPENAI_API_KEY to MDG key for agents package compatibility")
-            return True
+        # Add environment variables
+        config["env"] = os.environ.copy()
+        if self.debug_mode:
+            config["env"]["PYTHONPATH"] = str(self.base_dir)
+            
+        return config
         
-        logger.error("❌ OPENAI_MDG_API_KEY not found. Please set this environment variable.")
-        return False
+    def validate_environment(self) -> Dict[str, Any]:
+        """Validate that all required components are available"""
+        status = {
+            "servers": {},
+            "dependencies": {},
+            "overall": "healthy"
+        }
         
-    except ImportError:
-        logger.error("❌ OpenAI package not installed")
-        return False
+        # Check server directories
+        for server_name, server_config in self.mcp_servers.items():
+            cwd_path = Path(server_config["cwd"])
+            status["servers"][server_name] = {
+                "directory_exists": cwd_path.exists(),
+                "command": server_config["command"],
+                "available": False
+            }
+            
+            # TODO: Could add actual connectivity test here
+            
+        # Check Python dependencies
+        try:
+            import anthropic
+            status["dependencies"]["anthropic"] = True
+        except ImportError:
+            status["dependencies"]["anthropic"] = False
+            status["overall"] = "degraded"
+            
+        try:
+            import mcp
+            status["dependencies"]["mcp"] = True
+        except ImportError:
+            status["dependencies"]["mcp"] = False
+            status["overall"] = "degraded"
+            
+        return status
 
-def get_agent_config(model: Optional[str] = None, temperature: Optional[float] = None) -> dict:
-    """
-    Get standardized agent configuration with optimized settings.
-    
-    Args:
-        model: Override default model
-        temperature: Override default temperature
-        
-    Returns:
-        dict: Agent configuration optimized for high-performance operation
-    """
-    selected_model = model or DEFAULT_MODEL
-    
-    # Configure API and display appropriate rate limits
-    api_configured = configure_openai_client()
-    
-    # Display model-specific rate limits
-    if selected_model in RATE_LIMITS:
-        limits = RATE_LIMITS[selected_model]
-        logger.info(f"🚀 Model: {selected_model}")
-        logger.info(f"📊 Rate limits: {limits['tokens_per_minute']:,} TPM, {limits['requests_per_minute']:,} RPM, {limits['tokens_per_day']:,} TPD")
-    
+# Global configuration instance
+config = CrystaLyseConfig()
+
+# Backward compatibility functions
+def get_agent_config():
+    """Backward compatibility for old agent config function"""
     return {
-        "model": selected_model,
-        "temperature": temperature or DEFAULT_TEMPERATURE,
-        "max_tokens": 4096,  # Optimized for detailed materials analysis
-        "api_configured": api_configured
+        "model": config.default_model,
+        "temperature": config.default_temperature,
+        "max_turns": config.max_turns
     }
 
-def verify_rate_limits():
-    """
-    Verify that MDG API key is configured for high rate limits.
-    
-    Returns:
-        dict: Rate limit status and configuration
-    """
-    mdg_configured = os.getenv("OPENAI_MDG_API_KEY") is not None
-    
-    return {
-        "mdg_api_configured": mdg_configured,
-        "expected_rate_limits": MDG_RATE_LIMITS if mdg_configured else "API key required",
-        "recommended_batch_size": 50 if mdg_configured else 1,
-        "recommended_parallel_requests": 100 if mdg_configured else 1,
-        "status": "optimal" if mdg_configured else "missing_api_key"
-    }
-
-# Auto-configure on import
-_api_configured = configure_openai_client()
-
-# Export configuration status
-API_CONFIGURED = _api_configured
-USING_MDG_KEY = os.getenv("OPENAI_MDG_API_KEY") is not None
-
-# Startup messages suppressed - configuration status available via verify_rate_limits()
-# if USING_MDG_KEY:
-#     print("🚀 CrystaLyse.AI: High-performance mode enabled with MDG API key")
-#     print(f"📊 Rate limits: {MDG_RATE_LIMITS['tokens_per_minute']:,} TPM, {MDG_RATE_LIMITS['requests_per_minute']:,} RPM")
-#     print("🔄 OPENAI_API_KEY set to MDG key for agents package")
-# else:
-#     print("❌ CrystaLyse.AI: OPENAI_MDG_API_KEY required - please set this environment variable")
+DEFAULT_MODEL = config.default_model
