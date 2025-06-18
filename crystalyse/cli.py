@@ -58,7 +58,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.completion import FuzzyCompleter, WordCompleter
 
-from .unified_agent import CrystaLyseUnifiedAgent, AgentConfig
+from .agents.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
 from .config import config
 
 console = Console()

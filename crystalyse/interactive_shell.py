@@ -42,7 +42,7 @@ from rich.syntax import Syntax
 from rich.columns import Columns
 from rich.text import Text
 
-from .unified_agent import CrystaLyseUnifiedAgent, AgentConfig
+from .agents.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
 from .config import config
 
 

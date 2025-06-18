@@ -6,7 +6,7 @@ Usage: python simple_query.py "your query here" [mode]
 
 import asyncio
 import sys
-from crystalyse.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
+from crystalyse.agents.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
 
 async def query_agent(query_text, mode="rigorous"):
     """Query the CrystaLyse.AI agent"""

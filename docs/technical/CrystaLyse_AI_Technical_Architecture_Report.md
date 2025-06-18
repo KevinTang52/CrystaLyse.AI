@@ -1,7 +1,7 @@
 # CrystaLyse.AI Technical Architecture Report
 
-**Version**: 1.0  
-**Date**: 2025-06-17  
+**Version**: 1.1  
+**Date**: 2025-06-18  
 **Authors**: CrystaLyse.AI Development Team  
 **Status**: Production Ready  
 
@@ -12,6 +12,7 @@
 CrystaLyse.AI is a next-generation materials discovery platform that combines AI-powered chemical reasoning with computational validation through a unified agent architecture. The system has undergone a major transformation from fragmented prototype to production-ready platform, achieving a 90% reduction in codebase complexity while dramatically expanding functionality.
 
 **Key Achievements:**
+
 - Unified dual-mode discovery system (Creative + Rigorous)
 - Seamless integration of 3 computational chemistry MCP servers
 - 100% success rate in comprehensive stress testing
@@ -33,9 +34,12 @@ graph TB
     end
     
     subgraph "Agent Layer"
-        UA[CrystaLyse Unified Agent]
-        CM[Creative Mode<br/>o4-mini]
-        RM[Rigorous Mode<br/>o3]
+        UA[CrystaLyse Unified Agent<br/>Main Research Agent]
+        CM[Creative Mode<br/>o4-mini - Fast Exploration]
+        RM[Rigorous Mode<br/>o3 - Validated Discovery]
+        
+        
+        HC[Hill Climb Optimiser<br/>Reflection Agent]
     end
     
     subgraph "MCP Server Layer"
@@ -60,6 +64,8 @@ graph TB
     Shell --> UA
     UA --> CM
     UA --> RM
+    
+    UA --> HC
     
     CM --> SMACT
     CM --> CHEL
@@ -115,13 +121,15 @@ sequenceDiagram
 
 ### Directory Organisation
 
-```
+```bash
 CrystaLyse.AI/
 ├── crystalyse/                    # Core agent system
-│   ├── unified_agent.py          # Main unified agent (330 lines)
 │   ├── config.py                 # Centralised configuration
 │   ├── cli.py                    # CLI interface
-│   ├── agents/                   # Specialised agent patterns
+│   ├── interactive_shell.py      # Interactive shell interface
+│   ├── agents/                   # Agent implementations
+│   │   ├── unified_agent.py      # Main unified agent (330 lines)
+│   │   └── hill_climb_optimiser.py # Reflection agent
 │   ├── tools/                    # Atomic analysis tools
 │   ├── monitoring/               # Performance metrics
 │   ├── visualisation/            # 3D structure rendering
@@ -163,6 +171,11 @@ CrystaLyse.AI/
 │   ├── unit/                    # Component tests
 │   └── performance/             # Benchmarking
 │
+├── pipeline_agents_archive/     # Archived pipeline components
+│   ├── pipeline_agents.py       # Three-stage agents (archived)
+│   ├── copilot_agent.py         # Interactive checkpoints (archived)
+│   └── README.md                # Explanation of removal
+│
 ├── tutorials/                   # Application guides
 ├── complete_workflow/           # Working demonstrations
 ├── supplementary-docs/          # Technical documentation
@@ -175,7 +188,7 @@ CrystaLyse.AI/
 
 ### 1. Unified Agent Architecture
 
-**File**: `crystalyse/unified_agent.py` (330 lines)
+**File**: `crystalyse/agents/unified_agent.py` (330 lines)
 
 #### Agent Configuration
 ```python
@@ -300,6 +313,156 @@ class Config:
 - Sensible defaults for development
 - Production deployment settings
 - API key management (OPENAI_API_KEY, OPENAI_MDG_API_KEY)
+
+---
+
+## Agent Roles and Responsibilities
+
+### 1. CrystaLyse Unified Agent (Main Research Agent)
+
+**Role**: World-class materials science research agent orchestrating the entire discovery process
+
+**Key Responsibilities**:
+- **Query Analysis**: Critically assess user requests and seek clarification for ambiguous queries
+- **Planning**: Formulate multi-step discovery plans and announce them clearly
+- **Autonomous Execution**: Execute plans without waiting for permission
+- **Tool Orchestration**: Seamlessly integrate SMACT, Chemeleon, and MACE tools
+
+**Operational Workflow**:
+1. **Analyze and Clarify**: If query is broad (e.g., "find a new battery material"), use `ask_clarifying_questions` tool
+2. **Formulate a Plan**: Create specific action plan (e.g., "First generate compositions, then predict structures, finally calculate energies")
+3. **Execute Autonomously**: Proceed through plan step-by-step without asking for confirmation
+
+**Modes**:
+- **Creative Mode (o4-mini)**: Fast exploration with AI-driven chemical intuition
+- **Rigorous Mode (o3)**: Validated discovery with SMACT verification
+
+### 2. Hill Climb Optimiser (Reflection Agent)
+
+**Role**: Materials science researcher analysing optimisation results
+
+**Responsibilities**:
+- Analyse current batch of materials candidates
+- Identify what's working and what's not
+- Suggest specific edits to improve next generation
+- Focus on single, high-impact changes
+
+**Specialisation**: Compositional and structural modification recommendations
+
+### Agent Interaction Patterns
+
+```mermaid
+graph LR
+    subgraph "Unified Agent Flow"
+        UA[Unified Agent] -->|Mode Selection| MODE{Creative/Rigorous}
+        MODE -->|Creative| FAST[Fast Exploration]
+        MODE -->|Rigorous| VALID[Validated Results]
+        FAST -->|SMACT/Chemeleon/MACE| RESULTS[Discovery Results]
+        VALID -->|SMACT/Chemeleon/MACE| RESULTS
+    end
+    
+    subgraph "Optimisation Loop"
+        HC[Hill Climb] -->|Analyse| BATCH[Current Batch]
+        BATCH -->|Suggest| EDITS[Improvements]
+        EDITS -->|Generate| NEXT[Next Generation]
+        NEXT --> HC
+    end
+```
+
+### Key Design Principles
+
+1. **Unified Architecture**: Single agent handles entire discovery workflow
+2. **Autonomous Operation**: Agent executes plans without seeking permission
+3. **Clear Communication**: Agent announces plans before execution
+4. **Tool-First Approach**: Use computational tools rather than speculation
+5. **Error Recovery**: Graceful degradation with alternative approaches
+
+### Agent Workflow Examples
+
+#### Example 1: Unified Agent Handling Broad Query
+
+```
+User: "Find a new battery material"
+
+Unified Agent: [Detects broad query]
+→ Uses ask_clarifying_questions tool
+→ "I need more specific information to help you effectively. Please provide:
+   1. Battery type (Li-ion, Na-ion, solid-state, etc.)
+   2. Component (cathode, anode, electrolyte)
+   3. Key requirements (voltage, capacity, stability)
+   4. Any constraints (cost, toxicity, abundance)"
+
+User: "Na-ion cathode with high stability and low cost"
+
+Unified Agent: "Plan: First, I will use smact_tools.generate_compositions to find sodium-containing candidates. 
+Second, I'll predict their structures with chemeleon_tools.predict_structure. 
+Finally, I'll validate their stability using mace_tools.calculate_energy."
+
+[Proceeds to execute plan autonomously without asking for permission]
+```
+
+#### Example 2: Unified Agent Sequential Processing
+
+```
+Initial Query: "Design iron-based superconductor candidates"
+
+Unified Agent Execution:
+→ Parses query: iron-based, superconductor properties needed
+→ Calls smact_tools.generate_compositions with Fe constraint
+→ Validates compositions with smact_validity
+→ Calls chemeleon_tools.predict_structure for top candidates
+→ Generates multiple polymorphs per composition
+→ Calls mace_tools.calculate_energy for promising structures
+→ Ranks by stability and superconducting potential
+→ Returns comprehensive report:
+   "Top candidates:
+    1. FeSe (P4/nmm) - Formation energy: -0.82 eV/atom, high Tc potential
+    2. FeAs (I4/mmm) - Formation energy: -0.75 eV/atom, stable under pressure
+    Recommendations: Focus experimental efforts on FeSe thin films..."
+```
+
+#### Example 3: Hill Climb Optimisation Loop
+
+```
+Initial Generation: Battery cathode materials
+→ LiFePO4, LiMnPO4, LiCoPO4
+
+Hill Climb Reflection:
+→ "Analysis: Phosphate framework working well for stability
+   Issue: Limited capacity due to single redox center
+   Suggestion: Try mixed transition metals for higher capacity"
+
+Next Generation (based on suggestion):
+→ LiFe0.5Mn0.5PO4, LiFe0.3Mn0.3Co0.3PO4, LiNi0.5Mn0.5PO4
+
+Hill Climb Reflection:
+→ "Analysis: Mixed metals improving capacity
+   Issue: Ni causing stability problems
+   Suggestion: Focus on Fe-Mn combinations, try different ratios"
+
+Final Generation:
+→ LiFe0.7Mn0.3PO4, LiFe0.6Mn0.4PO4, LiFe0.4Mn0.6PO4
+→ Converged on optimal Fe:Mn ratio for capacity/stability balance
+```
+
+#### Example 4: Mode Switching Behaviour
+
+```
+Creative Mode (o4-mini) - Fast Exploration:
+User: "Explore novel piezoelectric materials"
+→ Rapidly generates 50+ compositions
+→ Uses chemical intuition and patterns
+→ No strict validation required
+→ Response time: ~28 seconds
+
+Rigorous Mode (o3) - Validated Discovery:
+User: "Find stable lead-free piezoelectric for medical devices"
+→ Careful composition generation with constraints
+→ SMACT validation for every candidate
+→ Full structure prediction and energy calculations
+→ Response time: ~53 seconds
+→ Results include uncertainty estimates
+```
 
 ---
 
@@ -658,8 +821,8 @@ The system is ready for production deployment and continued evolution toward a c
 ---
 
 **Document Information:**
-- **Version**: 1.0
-- **Last Updated**: 2025-06-17
-- **Next Review**: 2025-07-17
+- **Version**: 1.1
+- **Last Updated**: 2025-06-18
+- **Next Review**: 2025-07-18
 - **Maintainer**: CrystaLyse.AI Development Team
 - **Status**: Production Ready ✅

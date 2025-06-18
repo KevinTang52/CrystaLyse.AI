@@ -5,6 +5,8 @@ This script tests the atomic tools and unified system without requiring full MCP
 """
 
 import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import time
 import asyncio
 from pathlib import Path

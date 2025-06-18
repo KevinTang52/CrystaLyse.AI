@@ -17,7 +17,7 @@ from agents.model_settings import ModelSettings
 from agents.run import RunConfig
 from agents.mcp import MCPServerStdio
 from crystalyse.config import config
-from crystalyse.unified_agent import assess_progress, explore_alternatives, ask_clarifying_questions
+from crystalyse.agents.unified_agent import assess_progress, explore_alternatives, ask_clarifying_questions
 
 async def setup_mdg_provider():
     """Setup OpenAI provider with MDG API key"""

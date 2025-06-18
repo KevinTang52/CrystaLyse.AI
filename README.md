@@ -289,11 +289,14 @@ python tests/test_ferroelectric_materials.py
 ### Quick Verification
 
 ```bash
-# Test MACE integration
-python tests/test_mace_simple.py
+# Test unified system
+python tests/integration/test_unified_system.py
 
-# Test complete workflow
-python tests/test_integration_demo.py
+# Test stress scenarios
+python tests/stress/piezoelectric_detailed_test.py
+
+# Test basic functionality
+python examples/simple_query.py "Test basic functionality" creative
 ```
 
 ## 📊 Performance Comparison
@@ -319,6 +322,7 @@ python tests/test_integration_demo.py
 - **Interactive CLI**: Conversational interface with 3D visualization and session management
 - **Complete Workflow**: Composition → Structure → Energy → Recommendations
 - **Energy Validation**: MACE force field calculations with uncertainty quantification
+- **Organized Structure**: Clean separation of docs, tests, and examples
 - **Structure Prediction**: Chemeleon crystal structure generation
 - **3D Visualization**: Browser-based interactive structure viewing with multiple styles
 - **Session Management**: Save, load, and resume research sessions

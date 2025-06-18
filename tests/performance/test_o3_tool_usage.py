@@ -5,12 +5,14 @@ Test o3 model with tool usage scoring using the updated system
 
 import asyncio
 import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from crystalyse.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
+from crystalyse.agents.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
 
 def score_tool_usage(result, expected_tools):
     """Score how well the agent used the expected tools"""

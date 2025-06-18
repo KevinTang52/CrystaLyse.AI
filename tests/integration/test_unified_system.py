@@ -11,7 +11,7 @@ import tempfile
 import json
 
 # Test the unified system
-from crystalyse.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
+from crystalyse.agents.unified_agent import CrystaLyseUnifiedAgent, AgentConfig
 from crystalyse.tools.atomic_tools import (
     suggest_elements_for_application,
     generate_compositions_simple,
@@ -361,6 +361,8 @@ class TestPerformanceBenchmarks:
 if __name__ == "__main__":
     # Run tests manually if pytest not available
     import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
     
     print("Running CrystaLyse.AI Integration Tests...")
     
