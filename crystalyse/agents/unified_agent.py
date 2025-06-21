@@ -234,11 +234,11 @@ class CrystaLyse:
                 logger.info(f"Initialised agent with {len(mcp_servers)} MCP servers in {self.mode} mode.")
 
                 if not self.agent:
-                    # Create model settings with temperature (only if temperature is not None)
+                    # Create model settings with temperature and REQUIRED tool usage for computational queries
                     from agents.model_settings import ModelSettings
-                    model_settings = ModelSettings()
+                    model_settings = ModelSettings(tool_choice="required")
                     if self.temperature is not None:
-                        model_settings = ModelSettings(temperature=self.temperature)
+                        model_settings = ModelSettings(temperature=self.temperature, tool_choice="required")
                     
                     self.agent = Agent(
                         name="CrystaLyse",
@@ -278,6 +278,9 @@ class CrystaLyse:
                 
                 # Count tool calls from new_items
                 tool_call_count = sum(1 for item in result.new_items if hasattr(item, 'tool_calls') and item.tool_calls)
+                
+                # Validate tool usage to detect potential hallucination
+                tool_validation = self._validate_tool_usage(result, query)
 
                 return {
                     "status": "completed",
@@ -290,6 +293,7 @@ class CrystaLyse:
                         "total_items": len(result.new_items),
                         "raw_responses": len(result.raw_responses)
                     },
+                    "tool_validation": tool_validation,
                     "new_items": [str(item) for item in result.new_items[:5]],  # Sample of items
                 }
 
@@ -305,6 +309,40 @@ class CrystaLyse:
                     "model": self.model_name,
                 },
             }
+    
+    def _validate_tool_usage(self, result, query: str) -> Dict[str, Any]:
+        """Validate that computational tools were actually used when expected."""
+        tool_calls = getattr(result, 'tool_calls', []) or []
+        
+        # Check if query requires computational analysis
+        computational_keywords = [
+            'find', 'suggest', 'design', 'calculate', 'formation energy', 
+            'stability', 'structure', 'validate', 'materials', 'battery',
+            'solar', 'thermoelectric', 'photocatalyst', 'electrolyte'
+        ]
+        
+        needs_computation = any(keyword in query.lower() for keyword in computational_keywords)
+        
+        # Extract tool names from actual calls
+        tools_used = []
+        for call in tool_calls:
+            if hasattr(call, 'function') and hasattr(call.function, 'name'):
+                tools_used.append(call.function.name)
+        
+        validation = {
+            "needs_computation": needs_computation,
+            "tools_called": len(tool_calls),
+            "tools_used": tools_used,
+            "smact_used": any('smact' in tool.lower() for tool in tools_used),
+            "chemeleon_used": any('chemeleon' in tool.lower() for tool in tools_used),
+            "mace_used": any('mace' in tool.lower() for tool in tools_used),
+            "potential_hallucination": needs_computation and len(tool_calls) == 0
+        }
+        
+        if validation["potential_hallucination"]:
+            logger.warning(f"⚠️ POTENTIAL HALLUCINATION: Query '{query[:50]}...' appears to need computation but no tools were called!")
+            
+        return validation
 
 async def analyse_materials(query: str, mode: str = "creative", **kwargs) -> Dict[str, Any]:
     """Top-level analysis function for unified agent."""
