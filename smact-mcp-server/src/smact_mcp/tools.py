@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any
 # Import SMACT modules
 import smact
 from smact import Element, neutral_ratios
-from smact.screening import smact_validity, pauling_test, smact_filter
+from smact.screening import smact_validity as smact_validity_check, pauling_test, smact_filter
 from smact.utils.composition import parse_formula
 try:
     from smact.metallicity import metallicity_score
@@ -47,7 +47,7 @@ def smact_validity(
         comp = Composition(composition)
         
         # Run validity check
-        is_valid = smact_validity(
+        is_valid = smact_validity_check(
             comp,
             use_pauling_test=use_pauling_test,
             include_alloys=include_alloys,
