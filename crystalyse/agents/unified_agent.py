@@ -19,6 +19,11 @@ from pydantic import BaseModel
 
 from ..config import config
 from ..validation import validate_computational_response, ValidationViolation
+from ..infrastructure import (
+    get_connection_pool, 
+    get_session_manager,
+    get_resilient_caller
+)
 
 logger = logging.getLogger(__name__)
 
@@ -177,11 +182,12 @@ class CrystaLyse:
     This consolidates all functionality into a single, truly agentic implementation.
     """
 
-    def __init__(self, agent_config: AgentConfig = None, system_config=None):
+    def __init__(self, agent_config: AgentConfig = None, system_config=None, user_id: str = "default_user"):
         self.agent_config = agent_config or AgentConfig()
         # Use the global config if a specific one isn't provided
         self.system_config = system_config or config
         self.metrics = {"tool_calls": 0, "start_time": None, "errors": []}
+        self.user_id = user_id
         
         self.temperature = self.agent_config.temperature
         self.mode = self.agent_config.mode  # Use the mode from config directly
@@ -192,6 +198,12 @@ class CrystaLyse:
         
         # Initialize query classifier for tool enforcement
         self.query_classifier = ComputationalQueryClassifier()
+        
+        # Infrastructure components for memory and persistence
+        self.connection_pool = get_connection_pool()
+        self.session_manager = get_session_manager()
+        self.resilient_caller = get_resilient_caller()
+        self.session = None
         
     def _load_system_prompt(self) -> str:
         """Load and process the system prompt from markdown file."""
@@ -242,12 +254,36 @@ class CrystaLyse:
             enhanced_query = query
         
         try:
+            # Get or create persistent session with memory
+            if not self.session:
+                server_configs = {}
+                if (self.agent_config.enable_smact or 
+                    self.agent_config.enable_chemeleon or 
+                    self.agent_config.enable_mace):
+                    chemistry_config = self.system_config.get_server_config("chemistry_unified")
+                    server_configs["chemistry_unified"] = chemistry_config
+                
+                self.session = await self.session_manager.get_or_create_session(
+                    self.user_id, 
+                    self.agent_config,
+                    server_configs
+                )
+            
             async with AsyncExitStack() as stack:
                 mcp_servers = []
                 extra_tools = [assess_progress, explore_alternatives, ask_clarifying_questions]
 
-                # Use unified chemistry server that combines all tools
-                if (self.agent_config.enable_smact or 
+                # Use persistent connections if available, fallback to traditional
+                if self.session and self.session.connection_pool:
+                    connection = await self.session.connection_pool.get_connection("chemistry_unified")
+                    if connection:
+                        mcp_servers.append(connection)
+                        logger.info("✅ Using persistent MCP connection with memory")
+                    else:
+                        logger.info("⚠️ Falling back to traditional connection")
+                
+                # Fallback to traditional connection if needed
+                if not mcp_servers and (self.agent_config.enable_smact or 
                     self.agent_config.enable_chemeleon or 
                     self.agent_config.enable_mace):
                     
@@ -261,7 +297,7 @@ class CrystaLyse:
                                 "cwd": chemistry_config["cwd"],
                                 "env": chemistry_config.get("env", {})
                             },
-                            client_session_timeout_seconds=60  # Allow 60s for model downloads
+                            client_session_timeout_seconds=300  # Allow 5 minutes for complex calculations
                         )
                     )
                     mcp_servers.append(chemistry_server)
@@ -332,6 +368,16 @@ class CrystaLyse:
                     final_content = response_validation["sanitized_response"]
                     logger.error(f"Response validation failed: {response_validation['violations']}")
 
+                # Update session memory with discoveries
+                if self.session and requires_computation and tool_call_count > 0:
+                    self.session.record_tool_call("unified", True, "discovery")
+                    self.session.add_discovered_material(query, {"result": final_content})
+
+                # Include session info in metrics for memory tracking
+                session_info = None
+                if self.session:
+                    session_info = self.session.get_context_summary()
+
                 return {
                     "status": "completed",
                     "discovery_result": final_content,
@@ -341,7 +387,8 @@ class CrystaLyse:
                         "model": self.model_name,
                         "mode": self.mode,
                         "total_items": len(result.new_items),
-                        "raw_responses": len(result.raw_responses)
+                        "raw_responses": len(result.raw_responses),
+                        "session_info": session_info  # Memory/scratchpad data
                     },
                     "tool_validation": tool_validation,
                     "response_validation": response_validation,
@@ -453,12 +500,21 @@ class CrystaLyse:
             "critical_violations": len([v for v in violations if v.severity == "critical"]),
             "warning_violations": len([v for v in violations if v.severity == "warning"])
         }
+    
+    async def cleanup(self):
+        """Cleanup session and connection resources."""
+        if self.session:
+            await self.session.cleanup()
+        logger.info(f"CrystaLyse agent cleaned up for user {self.user_id}")
 
-async def analyse_materials(query: str, mode: str = "creative", **kwargs) -> Dict[str, Any]:
-    """Top-level analysis function for unified agent."""
+async def analyse_materials(query: str, mode: str = "creative", user_id: str = "default", **kwargs) -> Dict[str, Any]:
+    """Top-level analysis function for unified agent with memory."""
     config = AgentConfig(mode=mode, **kwargs)
-    agent = CrystaLyse(agent_config=config)
-    return await agent.discover_materials(query)
+    agent = CrystaLyse(agent_config=config, user_id=user_id)
+    try:
+        return await agent.discover_materials(query)
+    finally:
+        await agent.cleanup()
 
 
 async def rigorous_analysis(query: str, **kwargs) -> Dict[str, Any]:

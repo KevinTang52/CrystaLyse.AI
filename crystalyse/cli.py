@@ -278,16 +278,22 @@ async def _analyse(query: str, model: str, temperature: float, max_turns: int, o
             )
 
         else:
-            # Default: unified agent without special patterns
-            agent = CrystaLyse(
+            # Default: enhanced unified agent with infrastructure improvements
+            from .agents.enhanced_unified_agent import EnhancedCrystaLyse
+            
+            agent = EnhancedCrystaLyse(
                 agent_config=AgentConfig(
                     model=model,
                     temperature=temperature,
                     max_turns=max_turns
-                )
+                ),
+                user_id=f"cli_user_{query[:10]}"  # Simple user ID for CLI
             )
             
-            result = await agent.discover_materials(query)
+            try:
+                result = await agent.discover_materials(query)
+            finally:
+                await agent.cleanup()
             
         # Process and display results
         if output:
@@ -405,12 +411,15 @@ async def _shell(model: str, max_turns: int, temperature: float):
     
     display_splash_screen()
     
-    agent = CrystaLyse(
+    from .agents.enhanced_unified_agent import EnhancedCrystaLyse, cleanup_enhanced_infrastructure
+    
+    agent = EnhancedCrystaLyse(
         agent_config=AgentConfig(
             model=model,
             temperature=temperature,
             max_turns=max_turns
-        )
+        ),
+        user_id="interactive_shell_user"
     )
 
     # Setup prompt session
@@ -453,6 +462,13 @@ async def _shell(model: str, max_turns: int, temperature: float):
             continue
         except EOFError:
             break
+    
+    # Cleanup enhanced infrastructure
+    try:
+        await agent.cleanup()
+        await cleanup_enhanced_infrastructure()
+    except Exception as e:
+        console.print(f"[yellow]Warning: Cleanup error: {e}[/yellow]")
             
     console.print("\n[bold cyan]Exiting CrystaLyse.AI. Goodbye![/bold cyan]\n")
 
