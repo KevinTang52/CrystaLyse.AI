@@ -6,6 +6,7 @@
 ## ✅ Repository Cleanup Completed
 
 ### Removed Bloated Components
+
 - `comprehensive_tests/` - Failed test framework with inflated claims
 - `test_reports/` - Test results showing failures disguised as successes  
 - `reports/` - Documentation overstating capabilities
@@ -22,7 +23,7 @@
 
 ### What Remains (Essential Only)
 
-```
+```text
 CrystaLyse.AI/
 ├── README.md                     # Honest status documentation
 ├── STATUS.md                     # This file
@@ -44,12 +45,14 @@ CrystaLyse.AI/
 ## Current Reality
 
 ### ✅ What Actually Works
+
 - Basic agent framework loads
 - MCP server connections establish
-- Infrastructure (retries, connection pooling) 
+- Infrastructure (retries, connection pooling)
 - Anti-hallucination detection system
 
 ### ❌ What's Broken
+
 - **Chemeleon**: Generates `nan` coordinates
 - **MACE**: Cannot process malformed CIFs
 - **Tool Pipeline**: No end-to-end discovery workflow

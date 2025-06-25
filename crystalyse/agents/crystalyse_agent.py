@@ -59,7 +59,7 @@ class AgentConfig:
     """Configuration for the CrystaLyse agent"""
     mode: Literal["creative", "rigorous"] = "rigorous"
     model: str = None  # Will be auto-selected based on mode
-    max_turns: int = 30
+    max_turns: int = 100  # Increased to handle complex multi-step discoveries
     enable_mace: bool = True
     enable_chemeleon: bool = True
     enable_smact: bool = True  # Will be overridden based on mode
@@ -511,8 +511,9 @@ class CrystaLyse:
             final_content = str(result.final_output) if result.final_output else "No discovery result found."
             
             # Extract tool calls from result
+            from agents.items import ToolCallItem
             tool_calls = self._extract_tool_calls(result)
-            tool_call_count = len(tool_calls)
+            tool_call_count = sum(1 for item in result.new_items if isinstance(item, ToolCallItem))
             
             # Validate tool usage to detect potential hallucination
             tool_validation = self._validate_tool_usage(result, query, requires_computation)
@@ -637,15 +638,41 @@ class CrystaLyse:
 
     def _extract_tool_calls(self, result) -> List:
         """Extract tool calls from the result."""
+        from agents.items import ToolCallItem, ToolCallOutputItem
+        
         tool_calls = []
+        tool_call_count = 0
+        
         for item in result.new_items:
-            if hasattr(item, 'tool_calls') and item.tool_calls:
+            # Check for different types of tool-related items
+            if isinstance(item, ToolCallItem):
+                tool_call_count += 1
+                tool_calls.append({
+                    "type": "tool_call",
+                    "item_type": type(item).__name__
+                })
+            elif isinstance(item, ToolCallOutputItem):
+                tool_calls.append({
+                    "type": "tool_output", 
+                    "item_type": type(item).__name__,
+                    "output": getattr(item, 'output', None)
+                })
+            elif hasattr(item, 'tool_calls') and item.tool_calls:
+                # Legacy fallback
                 tool_calls.extend(item.tool_calls)
+                tool_call_count += len(item.tool_calls)
+        
+        # Return both the detailed calls and update the count
         return tool_calls
 
     def _validate_tool_usage(self, result, query: str, requires_computation: bool = None) -> Dict[str, Any]:
         """Validate that computational tools were actually used when expected."""
+        from agents.items import ToolCallItem, ToolCallOutputItem
+        
         tool_calls = self._extract_tool_calls(result)
+        
+        # Count actual tool calls more accurately
+        tool_call_count = sum(1 for item in result.new_items if isinstance(item, ToolCallItem))
         
         # Use the classifier result if provided, otherwise fallback to keyword check
         if requires_computation is None:
@@ -656,7 +683,9 @@ class CrystaLyse:
         # Extract tool names from actual calls
         tools_used = []
         for call in tool_calls:
-            if hasattr(call, 'function') and hasattr(call.function, 'name'):
+            if isinstance(call, dict) and call.get("type") == "tool_call":
+                tools_used.append(call.get("tool_name", "unknown"))
+            elif hasattr(call, 'function') and hasattr(call.function, 'name'):
                 tools_used.append(call.function.name)
         
         # Check for computational results in response without tool calls
@@ -683,14 +712,14 @@ class CrystaLyse:
         
         validation = {
             "needs_computation": needs_computation,
-            "tools_called": len(tool_calls),
+            "tools_called": tool_call_count,
             "tools_used": tools_used,
             "smact_used": any('smact' in tool.lower() for tool in tools_used),
             "chemeleon_used": any('chemeleon' in tool.lower() for tool in tools_used),
             "mace_used": any('mace' in tool.lower() for tool in tools_used),
             "contains_computational_results": contains_computational_results,
-            "potential_hallucination": needs_computation and len(tool_calls) == 0 and contains_computational_results,
-            "critical_failure": needs_computation and len(tool_calls) == 0 and contains_computational_results
+            "potential_hallucination": needs_computation and tool_call_count == 0 and contains_computational_results,
+            "critical_failure": needs_computation and tool_call_count == 0 and contains_computational_results
         }
         
         if validation["potential_hallucination"]:

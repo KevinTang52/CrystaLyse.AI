@@ -10,11 +10,14 @@ import sys
 # Add parent directories to path for importing existing tools
 current_dir = Path(__file__).parent
 project_root = current_dir.parent.parent.parent
-sys.path.insert(0, str(project_root / "smact-mcp-server" / "src"))
-sys.path.insert(0, str(project_root / "chemeleon-mcp-server" / "src"))
-sys.path.insert(0, str(project_root / "mace-mcp-server" / "src"))
+sys.path.insert(0, str(project_root / "oldmcpservers" / "smact-mcp-server" / "src"))
+sys.path.insert(0, str(project_root / "oldmcpservers" / "chemeleon-mcp-server" / "src"))
+sys.path.insert(0, str(project_root / "oldmcpservers" / "mace-mcp-server" / "src"))
 
 from mcp.server.fastmcp import FastMCP
+import io
+from ase.io import read as ase_read
+import numpy as np
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
@@ -263,16 +266,69 @@ async def generate_structures(
     """
     if CHEMELEON_AVAILABLE:
         try:
-            result_str = generate_crystal_csp(composition, num_structures, max_atoms)
+            # Generate structures with both CIF and dict format
+            result_str = generate_crystal_csp(
+                composition, 
+                num_structures, 
+                max_atoms,
+                output_format="both"  # Get both CIF and dict formats
+            )
             result = json.loads(result_str)
             
             if result.get("success"):
                 structures = result.get("structures", [])
+                processed_structures = []
+                
                 for i, struct in enumerate(structures):
-                    struct["method"] = "chemeleon"
-                    struct["confidence"] = 0.85
-                    struct["id"] = f"{composition}_struct_{i+1}"
-                return structures
+                    # Process each structure
+                    try:
+                        # First try to use the dict format if available
+                        if "dict" in struct and struct["dict"]:
+                            structure_dict = struct["dict"]
+                            # Ensure all required fields are present
+                            if all(key in structure_dict for key in ["numbers", "positions", "cell"]):
+                                processed_struct = {
+                                    "numbers": structure_dict["numbers"],
+                                    "positions": structure_dict["positions"],
+                                    "cell": structure_dict["cell"],
+                                    "pbc": structure_dict.get("pbc", [True, True, True]),
+                                    "formula": structure_dict.get("formula", composition),
+                                    "method": "chemeleon",
+                                    "confidence": 0.85,
+                                    "id": f"{composition}_struct_{i+1}",
+                                    "sample_idx": struct.get("sample_idx", i)
+                                }
+                                # Also include CIF for reference
+                                if "cif" in struct:
+                                    processed_struct["cif"] = struct["cif"]
+                                processed_structures.append(processed_struct)
+                                continue
+                        
+                        # Fallback: Convert CIF to dict if only CIF is available
+                        if "cif" in struct and struct["cif"]:
+                            cif_content = struct["cif"]
+                            # Parse CIF using ASE
+                            atoms = ase_read(io.StringIO(cif_content), format="cif")
+                            
+                            processed_struct = {
+                                "numbers": atoms.numbers.tolist(),
+                                "positions": atoms.positions.tolist(),
+                                "cell": atoms.cell.tolist(),
+                                "pbc": atoms.pbc.tolist(),
+                                "formula": atoms.get_chemical_formula(),
+                                "method": "chemeleon",
+                                "confidence": 0.85,
+                                "id": f"{composition}_struct_{i+1}",
+                                "sample_idx": struct.get("sample_idx", i),
+                                "cif": cif_content
+                            }
+                            processed_structures.append(processed_struct)
+                    
+                    except Exception as struct_error:
+                        logger.warning(f"Failed to process structure {i}: {struct_error}")
+                        continue
+                
+                return processed_structures
         except Exception as e:
             logger.error(f"Chemeleon structure generation failed: {e}")
     
@@ -416,12 +472,29 @@ async def calculate_energies(
 async def _calculate_single_energy(structure: Dict[str, Any], properties: List[str], structure_id: int) -> Dict[str, Any]:
     """Calculate energy for a single structure"""
     try:
+        # Ensure structure has all required fields for MACE
+        mace_structure = {
+            "numbers": structure.get("numbers"),
+            "positions": structure.get("positions"),
+            "cell": structure.get("cell"),
+            "pbc": structure.get("pbc", [True, True, True])
+        }
+        
+        # Validate required fields
+        if not all(key in structure and structure[key] is not None for key in ["numbers", "positions", "cell"]):
+            raise ValueError(f"Structure missing required fields. Has: {list(structure.keys())}")
+        
         # Use existing MACE tool
-        result_str = calculate_energy(json.dumps(structure), properties)
+        result_str = calculate_energy(
+            mace_structure,
+            include_forces=("forces" in properties),
+            include_stress=("stress" in properties)
+        )
         result = json.loads(result_str)
         
         result["structure_id"] = structure_id
         result["method"] = "mace"
+        result["composition"] = structure.get("formula", "unknown")
         return result
         
     except Exception as e:

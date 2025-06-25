@@ -42,8 +42,7 @@ class CrystaLyseConfig:
         
         # Agent Configuration
         self.default_model = os.getenv("CRYSTALYSE_MODEL", "o4-mini")
-        self.default_temperature = float(os.getenv("CRYSTALYSE_TEMPERATURE", "0.7"))
-        self.max_turns = int(os.getenv("CRYSTALYSE_MAX_TURNS", "10"))
+        self.max_turns = int(os.getenv("CRYSTALYSE_MAX_TURNS", "30"))
         
         # Performance Configuration
         self.parallel_batch_size = int(os.getenv("CRYSTALYSE_BATCH_SIZE", "10"))
@@ -135,7 +134,6 @@ def get_agent_config():
     """Backward compatibility for old agent config function"""
     return {
         "model": config.default_model,
-        "temperature": config.default_temperature,
         "max_turns": config.max_turns
     }
 
