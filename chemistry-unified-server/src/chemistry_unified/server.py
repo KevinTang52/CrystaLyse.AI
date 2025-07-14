@@ -3,12 +3,13 @@ Unified Chemistry MCP Server
 Integrates SMACT, Chemeleon, and MACE for a comprehensive materials discovery workflow.
 """
 
-import asyncio
 import logging
 import json
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+from typing import List, Dict, Any
 import sys
+import os
+from mcp.server.fastmcp import FastMCP
+from pathlib import Path
 
 # Add parent directories to path for importing existing tools
 current_dir = Path(__file__).parent
@@ -19,9 +20,6 @@ sys.path.insert(0, str(project_root / "oldmcpservers" / "chemeleon-mcp-server" /
 sys.path.insert(0, str(project_root / "oldmcpservers" / "mace-mcp-server" / "src"))
 # Add path for the new converter
 sys.path.insert(0, str(project_root / "crystalyse"))
-
-
-from mcp.server.fastmcp import FastMCP
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
@@ -43,7 +41,7 @@ except ImportError as e:
 
 # Import Chemeleon tools
 try:
-    from chemeleon_mcp.tools import generate_crystal_csp, analyse_structure
+    from chemeleon_mcp.tools import generate_crystal_csp
     CHEMELEON_AVAILABLE = True
     logger.info("Chemeleon tools loaded successfully")
 except ImportError as e:
@@ -54,11 +52,6 @@ except ImportError as e:
 try:
     from mace_mcp.tools import (
         calculate_formation_energy,
-        calculate_energy,
-        relax_structure,
-        suggest_substitutions,
-        extract_descriptors_robust,
-        adaptive_batch_calculation
     )
     MACE_AVAILABLE = True
     logger.info("MACE tools loaded successfully")
@@ -122,6 +115,30 @@ if SUPERCELL_CONVERTER_AVAILABLE:
         """Creates a supercell from a CIF string and returns the supercell as a CIF string."""
         return create_supercell_cif(cif_string, supercell_matrix)
 
+
+# Add visualization function after existing tools
+@mcp.tool()
+def create_structure_visualization(
+    cif_content: str,
+    formula: str,
+    mode: str = "rigorous",
+    title: str = "Crystal Structure"
+) -> str:
+    """Create comprehensive visualization for rigorous mode structures."""
+    try:
+        # Use current working directory for output
+        output_dir = os.getcwd()
+        
+        # Import and use visualization tools
+        from visualization_mcp.tools import create_rigorous_visualization
+        return create_rigorous_visualization(cif_content, formula, output_dir, title)
+        
+    except Exception as e:
+        return json.dumps({
+            "type": "visualization",
+            "status": "error",
+            "error": f"Rigorous visualization failed: {str(e)}"
+        })
 
 # --- Health Check ---
 @mcp.tool()

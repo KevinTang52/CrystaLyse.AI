@@ -42,6 +42,11 @@ class CrystaLyseConfig:
                 "command": os.getenv("MACE_MCP_COMMAND", "python"),
                 "args": os.getenv("MACE_MCP_ARGS", "-m mace_mcp.server").split(),
                 "cwd": os.getenv("MACE_MCP_PATH", str(self.base_dir / "mace-mcp-server" / "src"))
+            },
+            "visualization": {
+                "command": os.getenv("VISUALIZATION_MCP_COMMAND", "python"),
+                "args": os.getenv("VISUALIZATION_MCP_ARGS", "-m visualization_mcp.server").split(),
+                "cwd": os.getenv("VISUALIZATION_MCP_PATH", str(self.base_dir / "visualization-mcp-server" / "src"))
             }
         }
         

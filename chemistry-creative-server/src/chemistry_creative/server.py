@@ -1,12 +1,16 @@
 """Creative Chemistry MCP Server integrating Chemeleon and MACE (no SMACT for faster exploration)"""
 
-import asyncio
 import logging
 import json
 import copy
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+from typing import Dict, Any
 import sys
+import os
+from mcp.server.fastmcp import FastMCP
+from pathlib import Path
+from ase.io import write as ase_write
+from ase import Atoms
+import numpy as np
 
 # Add parent directories to path for importing existing tools
 current_dir = Path(__file__).parent
@@ -15,12 +19,6 @@ sys.path.insert(0, str(project_root / "oldmcpservers" / "chemeleon-mcp-server" /
 sys.path.insert(0, str(project_root / "oldmcpservers" / "mace-mcp-server" / "src"))
 sys.path.insert(0, str(project_root / "crystalyse"))
 
-
-from mcp.server.fastmcp import FastMCP
-import io
-from ase.io import read as ase_read, write as ase_write
-from ase import Atoms
-import numpy as np
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
@@ -48,11 +46,8 @@ except ImportError as e:
 try:
     from mace_mcp.tools import (
         calculate_formation_energy,
-        calculate_energy,
         relax_structure,
-        suggest_substitutions,
         extract_descriptors_robust,
-        adaptive_batch_calculation
     )
     MACE_AVAILABLE = True
     logger.info("MACE tools loaded successfully")
@@ -80,7 +75,7 @@ def structure_dict_to_cif(structure_dict: Dict[str, Any]) -> str:
                     # Try JSON decoding
                     decoded = field_value.decode('utf-8')
                     return json.loads(decoded)
-                except:
+                except Exception:
                     # Try direct eval as a fallback (careful with security)
                     import ast
                     return ast.literal_eval(decoded)
@@ -88,7 +83,7 @@ def structure_dict_to_cif(structure_dict: Dict[str, Any]) -> str:
                 logger.warning(f"{field_name} field is string - attempting to parse")
                 try:
                     return json.loads(field_value)
-                except:
+                except Exception:
                     import ast
                     return ast.literal_eval(field_value)
             else:
@@ -222,8 +217,6 @@ async def creative_discovery_pipeline(
     # Stage 2: Calculate energies for all structures
     if calculate_energies_flag and MACE_AVAILABLE and results["generated_structures"]:
         logger.info(f"Calculating energies for {len(results['generated_structures'])} structures...")
-        from pymatgen.core import Structure
-        from pymatgen.io.ase import AseAtomsAdaptor
         
         composition_energies = {}
         
@@ -393,6 +386,31 @@ if MACE_AVAILABLE:
     async def calculate_descriptors(structure: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate structure descriptors using MACE."""
         return await extract_descriptors_robust(structure)
+
+
+
+# Add visualization function after existing tools
+@mcp.tool()
+def create_structure_visualization(
+    cif_content: str,
+    formula: str,
+    title: str = "Crystal Structure"
+) -> str:
+    """Create fast 3Dmol.js visualization for creative mode structures."""
+    try:
+        # Use current working directory for output
+        output_dir = os.getcwd()
+        
+        # Import and use visualization tools
+        from visualization_mcp.tools import create_creative_visualization
+        return create_creative_visualization(cif_content, formula, output_dir, title)
+        
+    except Exception as e:
+        return json.dumps({
+            "type": "visualization",
+            "status": "error",
+            "error": f"Creative visualization failed: {str(e)}"
+        })
 
 # ===== SERVER STARTUP =====
 
