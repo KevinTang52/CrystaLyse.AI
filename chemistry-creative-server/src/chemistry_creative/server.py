@@ -13,6 +13,8 @@ current_dir = Path(__file__).parent
 project_root = current_dir.parent.parent.parent
 sys.path.insert(0, str(project_root / "oldmcpservers" / "chemeleon-mcp-server" / "src"))
 sys.path.insert(0, str(project_root / "oldmcpservers" / "mace-mcp-server" / "src"))
+sys.path.insert(0, str(project_root / "crystalyse"))
+
 
 from mcp.server.fastmcp import FastMCP
 import io
@@ -20,9 +22,16 @@ from ase.io import read as ase_read, write as ase_write
 from ase import Atoms
 import numpy as np
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
+
+try:
+    from converters import convert_cif_to_mace_input
+    CONVERTER_AVAILABLE = True
+    logger.info("CIF to MACE converter loaded successfully")
+except ImportError as e:
+    logger.warning(f"CIF to MACE converter not available: {e}")
+    CONVERTER_AVAILABLE = False
 
 # Initialise creative server
 mcp = FastMCP("chemistry-creative")
@@ -136,7 +145,6 @@ def structure_dict_to_cif(structure_dict: Dict[str, Any]) -> str:
 # ===== CREATIVE DISCOVERY PIPELINE =====
 
 @mcp.tool()
-from typing import Any, List, Dict
 async def creative_discovery_pipeline(
     compositions: list[str],
     structures_per_composition: int = 3,
@@ -230,21 +238,14 @@ async def creative_discovery_pipeline(
                     if "cif" not in struct or not isinstance(struct["cif"], str):
                         raise ValueError("Structure dictionary is missing a valid 'cif' entry.")
 
-                    p_structure = Structure.from_str(struct["cif"], fmt="cif")
-                    ase_atoms = AseAtomsAdaptor.get_atoms(p_structure)
-                    mace_input_dict = {
-                        "numbers": ase_atoms.get_atomic_numbers().tolist(),
-                        "positions": ase_atoms.get_positions().tolist(),
-                        "cell": ase_atoms.get_cell().tolist(),
-                        "pbc": ase_atoms.get_pbc().tolist(),
-                    }
+                    mace_input_dict = convert_cif_to_mace_input(struct["cif"])
 
                     # Call calculate_formation_energy with the standardized dict
-                    energy_result_str = calculate_formation_energy(mace_input_dict)
+                    energy_result_str = calculate_formation_energy(mace_input_dict.get("mace_input"))
                     energy_result = json.loads(energy_result_str)
                     
-                    if energy_result and energy_result.get("success") and "formation_energy" in energy_result:
-                        energy_per_atom = energy_result["formation_energy"]
+                    if energy_result and energy_result.get("status") == "completed" and "formation_energy_per_atom" in energy_result:
+                        energy_per_atom = energy_result["formation_energy_per_atom"]
                         
                         if comp not in composition_energies:
                             composition_energies[comp] = []
