@@ -336,8 +336,8 @@ class DualOutputFormatter:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        # Extract and save CIF files if available
-        cif_count, extracted_cifs = self._save_cif_files(result, output_dir)
+        # Extract and save CIF files if available (mode-aware)
+        cif_count, extracted_cifs = self._save_cif_files_mode_aware(result, output_dir, mode)
         
         # Create HTML visualizations for CIF files using universal visualizer
         html_count = self._save_html_visualizations_universal(output_dir, extracted_cifs)
@@ -372,6 +372,27 @@ class DualOutputFormatter:
                 f.write(updated_report)
             
         return output_dir
+    
+    def _save_cif_files_mode_aware(self, result: Dict[str, Any], output_dir: Path, mode: str) -> tuple[int, Dict[str, Dict[str, str]]]:
+        """
+        Extract and save CIF files using mode-specific logic.
+        
+        Args:
+            result: Full result dictionary from agent
+            output_dir: Directory to save CIF files to
+            mode: Analysis mode ("creative" or "rigorous")
+            
+        Returns:
+            Number of CIF files saved and extracted CIF data
+        """
+        if mode == "creative":
+            # Use creative formatter for creative mode
+            from crystalyse.output.creative_formatter import CreativeFormatter
+            creative_formatter = CreativeFormatter()
+            return creative_formatter.extract_cif_files_creative(result, output_dir)
+        else:
+            # Use regular extraction for rigorous mode
+            return self._save_cif_files(result, output_dir)
     
     def _create_query_slug(self, query: str, max_length: int = 50) -> str:
         """
