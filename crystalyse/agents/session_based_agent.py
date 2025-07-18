@@ -160,13 +160,14 @@ class CrystaLyseSession:
                 # Get server config
                 server_config = config.get_server_config(server_name)
                 
-                # Create MCP server
+                # Create MCP server with extended timeout for long-running operations
                 mcp_server = MCPServerStdio(
                     params={
                         "command": server_config["command"],
                         "args": server_config["args"],
                         "env": server_config.get("env", {})
-                    }
+                    },
+                    client_session_timeout_seconds=300  # 5 minutes for complex calculations
                 )
                 
                 # Connect to server
