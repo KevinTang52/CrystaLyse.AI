@@ -257,7 +257,7 @@ if SESSION_BASED_AVAILABLE:
         manager = get_session_manager()
         
         # Create session
-        session = manager.get_or_create_session(session_id, user_id)
+        session = manager.get_or_create_session(session_id, user_id, max_turns=config.max_turns)
         
         # Display welcome message
         _display_session_welcome(console, user_id, session_id, mode)
@@ -497,7 +497,7 @@ if SESSION_BASED_AVAILABLE:
         manager = get_session_manager()
         
         # Create demo session
-        session = manager.get_or_create_session("demo_session", "demo_user")
+        session = manager.get_or_create_session("demo_session", "demo_user", max_turns=config.max_turns)
         
         # Setup agent
         console.print("[dim]Setting up agent...[/dim]")

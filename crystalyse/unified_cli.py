@@ -285,7 +285,10 @@ class UnifiedCrystaLyseInterface:
     async def process_chat_query(self, query: str):
         """Process query in chat mode."""
         if not SESSION_BASED_AVAILABLE:
-            self.show_system_message("Session-based chat not available", "error")
+            self.show_system_message("Session-based chat not available due to missing MCP dependencies", "error")
+            self.show_system_message("Please upgrade to Python 3.10+ and install MCP packages", "warning")
+            self.show_system_message("Fallback: Using analysis mode for this query", "info")
+            await self.process_analysis_query(query)
             return
         
         # Initialize session if needed
@@ -299,7 +302,8 @@ class UnifiedCrystaLyseInterface:
         # Process with session
         with self.console.status("[bold cyan]Processing query...", spinner="dots"):
             try:
-                response = await self.current_session.process_query(query)
+                result = await self.current_session.run_with_history(query)
+                response = result.get("response", "No response received")
                 
                 # Show response
                 assistant_panel = self.chat_display.render_assistant_message(response)

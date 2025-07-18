@@ -23,10 +23,9 @@ from pathlib import Path
 from datetime import datetime
 
 # OpenAI Agents SDK imports
-from agents import Agent, Runner, function_tool, gen_trace_id, RunConfig, set_default_openai_key
+from agents import Agent, Runner, gen_trace_id, RunConfig, set_default_openai_key
 from agents.mcp import MCPServerStdio
 from agents.model_settings import ModelSettings
-from agents.items import MessageOutputItem
 
 # CrystaLyse imports
 from ..memory import CrystaLyseMemory, get_memory_tools
@@ -52,7 +51,7 @@ class CrystaLyseSession:
     Provides automatic conversation history management and memory integration.
     """
     
-    def __init__(self, session_id: str, user_id: str = "default", db_path: Optional[Path] = None):
+    def __init__(self, session_id: str, user_id: str = "default", db_path: Optional[Path] = None, max_turns: int = 100):
         """
         Initialize CrystaLyse session.
         
@@ -60,9 +59,11 @@ class CrystaLyseSession:
             session_id: Unique session identifier
             user_id: User identifier for memory system
             db_path: Path to SQLite database (default: ~/.crystalyse/conversations.db)
+            max_turns: Maximum number of turns for agent execution (default: 100)
         """
         self.session_id = session_id
         self.user_id = user_id
+        self.max_turns = max_turns
         
         # Setup database
         if db_path is None:
@@ -326,6 +327,7 @@ Always:
             result = await Runner.run(
                 starting_agent=self.agent,
                 input=input_messages,
+                max_turns=self.max_turns,
                 run_config=RunConfig(
                     trace_id=gen_trace_id(),
                     workflow_name="CrystaLyse Session"
@@ -376,10 +378,10 @@ class CrystaLyseSessionManager:
     def __init__(self):
         self.sessions: Dict[str, CrystaLyseSession] = {}
     
-    def get_or_create_session(self, session_id: str, user_id: str = "default") -> CrystaLyseSession:
+    def get_or_create_session(self, session_id: str, user_id: str = "default", max_turns: int = 100) -> CrystaLyseSession:
         """Get existing session or create new one."""
         if session_id not in self.sessions:
-            self.sessions[session_id] = CrystaLyseSession(session_id, user_id)
+            self.sessions[session_id] = CrystaLyseSession(session_id, user_id, max_turns=max_turns)
         
         return self.sessions[session_id]
     
