@@ -1,6 +1,6 @@
 # CrystaLyse.AI
 
-![CrystaLyse.AI Interface](docs/assets/images/CLI_Startup_Image.png)
+![CrystaLyse.AI Interface](dev/docs/assets/images/CLI_Startup_Image.png)
 
 **Status**: Research Preview - Fully Functional Materials Design Platform
 
