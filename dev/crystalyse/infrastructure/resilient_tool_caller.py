@@ -30,6 +30,7 @@ class ResilientToolCaller:
         operation_type: str = "default",
         max_retries: int = 3,
         timeout_override: Optional[int] = None,
+        context: Optional[dict] = None,
         **kwargs
     ) -> Any:
         """
@@ -51,7 +52,7 @@ class ResilientToolCaller:
             Exception: If all retry attempts fail
         """
         # Determine appropriate timeout
-        timeout = timeout_override or self.timeout_config.get_timeout(tool_name, operation_type)
+        timeout = timeout_override or self.timeout_config.get_timeout(tool_name, operation_type, context)
         
         # Track call statistics
         call_key = f"{tool_name}_{operation_type}"
@@ -213,32 +214,78 @@ class ToolTimeoutConfig:
             'chemeleon_structure_batch': 300,
             'chemeleon_novel_discovery': 300,
             
-            # MACE operations (energy calculations)
-            'mace_single_energy': 120,
-            'mace_batch_energy': 300,
-            'mace_optimization': 300,
+            # MACE operations (energy calculations) - increased for complex materials
+            'mace_single_energy': 180,
+            'mace_batch_energy': 600,  # 10 minutes for complex batch calculations
+            'mace_optimization': 600,
+            'mace_formation_energy': 900,  # 15 minutes for formation energy calculations
             
-            # Combined operations
-            'discovery_workflow': 300,
+            # Battery-specific operations (complex transformations)
+            'battery_analysis': 1200,  # 20 minutes for battery material analysis
+            'battery_transformation': 900,  # 15 minutes for Li/delithiation analysis
+            
+            # Combined operations - increased for complex workflows
+            'discovery_workflow': 600,  # 10 minutes for standard discovery
+            'battery_workflow': 1200,  # 20 minutes for battery discovery workflows
             'validation_workflow': 180,
+            
+            # Agent-level operations
+            'crystalyse_agent_discovery': 1200,  # 20 minutes for agent discovery workflows
         }
     
-    def get_timeout(self, tool_name: str, operation_type: str) -> int:
-        """Get appropriate timeout for a tool operation."""
+    def get_timeout(self, tool_name: str, operation_type: str, context: dict = None) -> int:
+        """Get appropriate timeout for a tool operation with context awareness."""
         # Try specific key first
         key = f"{tool_name}_{operation_type}"
-        if key in self.timeouts:
-            return self.timeouts[key]
+        base_timeout = self.timeouts.get(key)
         
-        # Try tool-based defaults
-        tool_defaults = {
-            'smact': 60,
-            'chemeleon': 300,  # 5 minutes for structure generation
-            'mace': 180,
-            'chemistry_unified': 300
+        if base_timeout is None:
+            # Try tool-based defaults
+            tool_defaults = {
+                'smact': 60,
+                'chemeleon': 300,  # 5 minutes for structure generation
+                'mace': 600,  # 10 minutes for MACE energy calculations
+                'chemistry_unified': 600,  # 10 minutes for unified workflows
+            }
+            base_timeout = tool_defaults.get(tool_name, self.default_timeout)
+        
+        # Apply context-aware scaling
+        return self._apply_context_scaling(base_timeout, context or {})
+    
+    def _apply_context_scaling(self, base_timeout: int, context: dict) -> int:
+        """Scale timeout based on computational complexity context."""
+        timeout = base_timeout
+        
+        # Scale by number of materials being analysed
+        num_materials = context.get('num_materials', 1)
+        if num_materials > 5:
+            timeout *= 2.0  # Double for 6+ materials
+        elif num_materials > 2:
+            timeout *= 1.5  # 50% increase for 3-5 materials
+        
+        # Scale by system complexity
+        avg_atoms = context.get('avg_atoms_per_formula', 1)
+        if avg_atoms > 10:
+            timeout *= 1.8  # Large systems
+        elif avg_atoms > 5:
+            timeout *= 1.3  # Medium systems
+        
+        # Scale by calculation type
+        calc_type = context.get('calculation_type', 'standard')
+        type_multipliers = {
+            'formation_energy': 1.0,      # Baseline (optimised with unit cells)
+            'electronic_properties': 2.0, # Need supercells, longer calculations
+            'phonon_dynamics': 3.0,       # Very expensive
+            'defect_chemistry': 2.5,      # Need large supercells
+            'surface_interface': 2.2,     # Surface calculations
+            'standard': 1.0
         }
+        timeout *= type_multipliers.get(calc_type, 1.0)
         
-        return tool_defaults.get(tool_name, self.default_timeout)
+        # Apply reasonable bounds
+        timeout = max(60, min(int(timeout), 3600))  # 1 min to 1 hour max
+        
+        return timeout
     
     def update_timeout(self, tool_name: str, operation_type: str, timeout: int) -> None:
         """Update timeout configuration."""

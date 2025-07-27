@@ -743,14 +743,56 @@ class CrystaLyse:
 
     async def _run_discovery_with_retry(self, query: str):
         """Run discovery with retry logic."""
+        # Extract context for intelligent timeout scaling
+        context = self._extract_query_context(query)
+        
         return await self.resilient_caller.call_with_retry(
             self._run_discovery,
             query,
             tool_name="crystalyse_agent",
             operation_type="discovery",
             max_retries=2,
-            timeout_override=300  # 5 minutes
+            context=context
         )
+
+    def _extract_query_context(self, query: str) -> dict:
+        """Extract computational complexity context from query."""
+        import re
+        
+        context = {}
+        
+        # Count number of chemical formulas/materials mentioned
+        formula_pattern = r'\b[A-Z][a-z]?(?:\d*[A-Z][a-z]?\d*)*\b'
+        formulas = re.findall(formula_pattern, query)
+        # Filter common elements/compounds
+        non_chemical = {'V', 'Li', 'Al', 'Ca', 'K', 'Na', 'Mg', 'Ba', 'Sr', 'Be', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'Cl', 'Ar', 'As', 'Br', 'I', 'At'}
+        chemical_formulas = [f for f in formulas if len(f) > 1 or f in non_chemical]
+        context['num_materials'] = max(1, len(set(chemical_formulas)))
+        
+        # Estimate system complexity from keywords
+        query_lower = query.lower()
+        if any(word in query_lower for word in ['supercell', 'large', 'bulk', 'surface', 'interface']):
+            context['avg_atoms_per_formula'] = 12
+        elif any(word in query_lower for word in ['complex', 'layered', 'perovskite']):
+            context['avg_atoms_per_formula'] = 8
+        else:
+            context['avg_atoms_per_formula'] = 4
+        
+        # Determine calculation type from keywords
+        if any(word in query_lower for word in ['formation', 'stability', 'thermodynamic', 'voltage', 'intercalation', 'phase']):
+            context['calculation_type'] = 'formation_energy'
+        elif any(word in query_lower for word in ['band gap', 'electronic', 'conductivity', 'dos', 'density of states']):
+            context['calculation_type'] = 'electronic_properties'
+        elif any(word in query_lower for word in ['phonon', 'vibration', 'thermal', 'dynamics']):
+            context['calculation_type'] = 'phonon_dynamics'
+        elif any(word in query_lower for word in ['defect', 'vacancy', 'interstitial', 'substitution']):
+            context['calculation_type'] = 'defect_chemistry'
+        elif any(word in query_lower for word in ['surface', 'interface', 'slab']):
+            context['calculation_type'] = 'surface_interface'
+        else:
+            context['calculation_type'] = 'standard'
+        
+        return context
 
     async def _run_discovery(self, query: str):
         """Internal discovery method."""

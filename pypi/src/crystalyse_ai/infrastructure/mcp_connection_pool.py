@@ -7,31 +7,9 @@ import logging
 import time
 from typing import Dict, Optional, Any
 from contextlib import AsyncExitStack
-# Fix circular import by using absolute import
+# Import MCPServerStdio directly (openai-agents installed via pip)
 try:
-    import sys
-    import os
-    
-    # Temporarily remove the local crystalyse directory from sys.path
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    crystalyse_parent = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
-    
-    # Store original sys.path and remove conflicting paths
-    original_paths = sys.path[:]
-    paths_to_remove = [p for p in sys.path if 'crystalyse' in p.lower()]
-    for path in paths_to_remove:
-        if path in sys.path:
-            sys.path.remove(path)
-    
-    # Add the OpenAI agents SDK path explicitly
-    openai_agents_path = os.path.join(crystalyse_parent, 'openai-agents-python', 'src')
-    if os.path.exists(openai_agents_path) and openai_agents_path not in sys.path:
-        sys.path.insert(0, openai_agents_path)
-    
-    from agents.mcp.server import MCPServerStdio
-    
-    # Restore original sys.path
-    sys.path = original_paths
+    from agents.mcp import MCPServerStdio
     
 except ImportError as e:
     # Provide placeholder implementation

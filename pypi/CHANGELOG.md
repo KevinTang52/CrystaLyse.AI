@@ -52,6 +52,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Materials science module documentation
 - Developer guidelines and contribution guide
 
+## [1.0.14] - 2025-07-27
+
+### Added
+- **Complete Project Documentation**: Added comprehensive README.md with project description for PyPI
+  - Detailed feature overview including dual-mode analysis system
+  - Usage examples and performance characteristics  
+  - Scientific applications for energy and electronic materials
+  - Quick start guide and installation instructions
+  - Links to documentation, changelog, and support resources
+
+### Fixed - Performance Optimisations
+- **Context-Aware Timeout Scaling**: Implemented intelligent timeout management based on computational complexity
+  - Dynamic timeout adjustment based on number of materials, system complexity, and calculation type
+  - Formation energy calculations: 1.0x baseline (optimised with unit cells)
+  - Electronic properties: 2.0x multiplier (require supercells)
+  - Phonon dynamics: 3.0x multiplier (very expensive calculations)
+  - Bounded timeouts between 1 minute and 1 hour maximum
+
+- **Formation Energy Calculation Optimisations**: Updated energy calculation protocol
+  - Formation energies now use unit cells directly instead of 2×2×2 supercells
+  - Provides 64-512× performance improvement due to MACE N²-N³ scaling with atom count
+  - Example: LiCoO₂ analysis now uses 4 atoms instead of 32 atoms
+  - Reduced timeout from 300 seconds to ~191 seconds for battery material analysis
+
+- **Import Warning Resolution**: Fixed "MCPServerStdio not available" warnings
+  - Simplified import structure for PyPI distribution where packages are installed via pip
+  - Removed complex sys.path manipulation in favour of direct imports
+  - Eliminated dependency on development environment paths
+
+### Changed - Visualisation Updates
+- **3dmol.js Replacement**: Replaced 3dmol.js HTML generation with CIF file saving for PyPI version
+  - Creative mode: Saves CIF files directly to user's working directory
+  - Rigorous mode: Saves CIF files + includes pymatviz analysis suite
+  - Resolves visualisation compatibility issues while maintaining structure access
+  - Users can open CIF files in their preferred crystallographic software
+
+- **Enhanced Agent Prompt**: Updated unified agent prompt with optimised calculation protocols
+  - Clear distinction between formation energy vs electronic property calculations
+  - Guidance on when to use unit cells vs supercells based on calculation type
+  - Improved computational efficiency recommendations
+
+### Technical Improvements
+- Removed hardcoded timeout overrides in favour of context-aware scaling
+- Added query analysis for automatic complexity detection
+- Improved error handling and logging throughout the pipeline
+- Version bumped to 1.0.14 with all optimisations included
+
+## [1.0.13] - 2025-07-27
+
+### Fixed - Critical Performance and Import Issues
+- **Context-Aware Timeout Management**: Implemented intelligent timeout scaling
+- **Formation Energy Optimisations**: Updated calculation protocol for unit cells vs supercells  
+- **Import Warning Resolution**: Fixed MCPServerStdio availability warnings
+- **3dmol.js Replacement**: Replaced HTML generation with CIF file saving
+
+### Changed
+- Updated agent prompt with optimised calculation protocols
+- Simplified import structure for PyPI distribution
+- Enhanced error handling and logging
+
 ## [1.0.12] - 2025-07-20
 
 ### Fixed - Critical Fixes

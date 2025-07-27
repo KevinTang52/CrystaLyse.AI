@@ -341,7 +341,7 @@ async def creative_discovery_pipeline(
         logger.info(f"Creating visualizations for {len(results['most_stable_cifs'])} compositions...")
         
         # Use dedicated runtime output directory
-        project_root = Path(__file__).parent.parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent.parent
         working_dir = str(project_root / "all-runtime-output")
         
         # Import visualization tools
@@ -447,7 +447,7 @@ def create_structure_visualization(
     """Create fast 3Dmol.js visualization for creative mode structures."""
     try:
         # Use dedicated runtime output directory
-        project_root = Path(__file__).parent.parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent.parent
         working_dir = str(project_root / "all-runtime-output")
         
         # Import and use visualization tools

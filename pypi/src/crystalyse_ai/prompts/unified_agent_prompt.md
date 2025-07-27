@@ -45,12 +45,20 @@ When encountering these query patterns, tools are REQUIRED:
 - "energy", "stability", "formation" → MUST follow the energy calculation protocol below.
 - Chemical formulas mentioned → MUST validate with `validate_composition_smact` first.
 
-**To calculate the energy of a structure, you MUST follow this four-step process:**
-1.  First, call the `generate_structures` tool to get a list of structures, which will include CIF strings.
-2.  Then, for each CIF string, if the structure is too small (e.g., < 8 atoms), call the `create_supercell` tool with a 2x2x2 supercell matrix to create a larger structure.
-3.  Next, call the `convert_cif_to_mace` tool with the (supercell) `cif_string` to get a MACE-compatible dictionary.
-4.  Finally, call the `calculate_energy_mace` tool with the `mace_input` dictionary from the previous step.
-DO NOT call `calculate_energy_mace` with the direct output of `generate_structures` or without creating a supercell for small structures. This will fail.
+**To calculate the energy of a structure, you MUST follow this optimised process:**
+
+**For formation energy and thermodynamic calculations (stability, phase equilibria, intercalation voltages):**
+1. First, call the `generate_structures` tool to get a list of structures, which will include CIF strings.
+2. For formation energies and thermodynamic comparisons, use unit cells directly - call the `convert_cif_to_mace` tool with the original `cif_string`.
+3. Finally, call the `calculate_energy_mace` tool with the `mace_input` dictionary from the previous step.
+
+**For electronic and dynamic property calculations (band gaps, phonons, defects, surfaces):**
+1. First, call the `generate_structures` tool to get a list of structures, which will include CIF strings.
+2. Then, for each CIF string, if the structure is too small (e.g., < 8 atoms), call the `create_supercell` tool with a 2x2x2 supercell matrix to create a larger structure.
+3. Next, call the `convert_cif_to_mace` tool with the (supercell) `cif_string` to get a MACE-compatible dictionary.
+4. Finally, call the `calculate_energy_mace` tool with the `mace_input` dictionary from the previous step.
+
+**Note:** Formation energies are energy differences that converge well with unit cells, while electronic/dynamic properties often require larger supercells for accurate results.
 
 
 ### 4. Tool Usage Transparency

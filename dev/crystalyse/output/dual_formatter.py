@@ -41,7 +41,7 @@ class DualOutputFormatter:
         if base_output_dir is None:
             # Use all-runtime-output directory in project root
             current_file = Path(__file__)
-            project_root = current_file.parent.parent.parent.parent
+            project_root = current_file.parent.parent.parent
             base_output_dir = project_root / "all-runtime-output"
         self.base_output_dir = Path(base_output_dir)
         self.cif_visualizer = UniversalCIFVisualizer()

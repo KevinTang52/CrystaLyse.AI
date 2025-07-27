@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crystalyse-ai"
-version = "1.0.12"
+version = "1.0.14"
 description = "CrystaLyse.AI - Autonomous AI agents for accelerated inorganic materials design through natural language interfaces"
 readme = "README.md"
 license = {file = "LICENSE"}
