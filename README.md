@@ -4,7 +4,7 @@
 
 **Status**: Research Preview v2.0.0-alpha 
 
-CrystaLyse.AI is an autonomous AI agent for accelerated inorganic materials design. CrystaLyse.AI lets materials scientists delegate substantial computational materials design tasks directly from their terminal. In early testing, CrystaLyse completed materials design workflows in minutes that would normally take a few days of manual computational work. With CrystaLyse.AI, our goal is to better understand how researchers approach materials design and to help build a tool that accelerates their workflows and focuses their energies towards the challenging materials design frontiers.
+CrystaLyse.AI is an autonomous AI agent for inorganic materials design. CrystaLyse.AI lets materials scientists delegate computational materials design tasks directly from their terminal. In early testing, CrystaLyse completed materials design workflows in minutes that would normally take a few days of manual computational work. With CrystaLyse.AI, our goal is a tool that assists researchers in solving challenges at the materials design frontiers.
 
 Built on the OpenAI Agents SDK framework with Model Context Protocol (MCP) integration, it provides a modular system for rapid, intelligent and adaptable materials design workflows.
 
@@ -19,7 +19,7 @@ Built on the OpenAI Agents SDK framework with Model Context Protocol (MCP) integ
 - **Dynamic tool coordination** through single enhanced agent (`EnhancedCrystaLyseAgent`)
 
 ### ✅ Complete Materials Pipeline
-- **Composition Validation**: SMACT screening for chemically reasonable materials
+- **Composition Validation**: SMACT screening for chemically reasonable element combinations
 - **Structure Prediction**: Chemeleon crystal structure generation with multiple candidates
 - **Energy Calculations**: MACE formation energy evaluation with uncertainty quantification
 - **Comprehensive Analysis**: XRD patterns, RDF analysis, coordination studies
@@ -244,6 +244,7 @@ conda create -n crystalyse python=3.11
 conda activate crystalyse
 
 # Install core package
+cd dev
 pip install -e .
 
 # Install individual tool servers (required dependencies)
