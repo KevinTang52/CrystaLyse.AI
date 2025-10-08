@@ -39,6 +39,14 @@ from .mode_injector import GlobalModeManager, inject_mode_into_mcp_servers, crea
 
 logger = logging.getLogger(__name__)
 
+# Import provenance handler
+try:
+    from ..ui.provenance_bridge import CrystaLyseProvenanceHandler, PROVENANCE_AVAILABLE
+except ImportError:
+    PROVENANCE_AVAILABLE = False
+    CrystaLyseProvenanceHandler = None
+    logger.warning("Provenance bridge not available - discovery will proceed without provenance")
+
 class EnhancedCrystaLyseAgent:
     """
     The backend of CrystaLyse.AI. It processes requests, manages MCP servers,
@@ -107,10 +115,36 @@ class EnhancedCrystaLyseAgent:
         trace_handler: Optional[ToolTraceHandler] = None
     ) -> Dict[str, Any]:
         """
-        Processes a single discovery request, streaming events to the trace_handler.
+        Processes a single discovery request with automatic provenance capture.
+
+        Provenance is always enabled - every query generates a complete audit trail
+        including materials discovered, MCP tool calls, and performance metrics.
+
+        Args:
+            query: Discovery query string
+            history: Optional conversation history
+            trace_handler: Optional custom trace handler (provenance handler auto-created if None)
+
+        Returns:
+            Dictionary with status, response, and provenance information
         """
         if not SDK_AVAILABLE:
             return {"status": "failed", "error": "OpenAI Agents SDK is not installed."}
+
+        # Auto-create provenance handler if not provided
+        # This ensures every query has provenance capture (core feature)
+        if trace_handler is None and PROVENANCE_AVAILABLE and CrystaLyseProvenanceHandler:
+            try:
+                from rich.console import Console
+                trace_handler = CrystaLyseProvenanceHandler(
+                    config=self.config,
+                    mode=self.mode,
+                    console=Console()
+                )
+                logger.info("Provenance handler auto-created for discovery session")
+            except Exception as e:
+                logger.warning(f"Failed to create provenance handler: {e} - proceeding without provenance")
+                trace_handler = None
 
         async with self._managed_mcp_servers() as mcp_servers:
             try:
@@ -221,11 +255,34 @@ class EnhancedCrystaLyseAgent:
                         except Exception as e:
                             logger.debug(f"Could not extract final result: {e}")
 
-                return {
+                # Build result dictionary
+                result = {
                     "status": "completed",
                     "query": query,
                     "response": final_response,
                 }
+
+                # Add provenance information if handler is provenance-aware
+                if isinstance(trace_handler, CrystaLyseProvenanceHandler):
+                    try:
+                        provenance_summary = trace_handler.finalize()
+                        result["provenance"] = {
+                            "session_id": trace_handler.session_id,
+                            "output_dir": str(trace_handler.output_dir) if hasattr(trace_handler, 'output_dir') else None,
+                            "summary": provenance_summary,
+                            "materials_catalogue": str(trace_handler.get_materials_catalogue_path()) if trace_handler.get_materials_catalogue_path() else None,
+                            "summary_file": str(trace_handler.get_summary_path()) if trace_handler.get_summary_path() else None,
+                            "events_file": str(trace_handler.get_events_path()) if trace_handler.get_events_path() else None
+                        }
+                        logger.info(f"Provenance captured: {trace_handler.session_id}")
+                    except Exception as e:
+                        logger.error(f"Error finalising provenance: {e}")
+                        result["provenance"] = {
+                            "error": str(e),
+                            "session_id": getattr(trace_handler, 'session_id', None)
+                        }
+
+                return result
             
             except asyncio.TimeoutError:
                 logger.error(f"Discovery timed out after {timeout_seconds} seconds.")

@@ -61,11 +61,23 @@ class CrystaLyseConfig:
         self.enable_metrics = os.getenv("CRYSTALYSE_METRICS", "true").lower() == "true"
         self.debug_mode = os.getenv("CRYSTALYSE_DEBUG", "false").lower() == "true"
         
-        # Visualization preferences - Default to CIF-only for simplicity
+        # Visualisation preferences - Default to CIF-only for simplicity
         self.visualization = {
             "enable_html": os.getenv("CRYSTALYSE_ENABLE_HTML_VIZ", "false").lower() == "true",
             "cif_only": os.getenv("CRYSTALYSE_CIF_ONLY", "true").lower() == "true",
             "default_color_scheme": os.getenv("CRYSTALYSE_COLOR_SCHEME", "vesta")
+        }
+
+        # Provenance Configuration (ALWAYS ENABLED)
+        # Provenance is a core feature of CrystaLyse - always captures complete audit trails
+        # Users can customise display and storage, but cannot disable capture
+        self.provenance = {
+            "output_dir": Path(os.getenv("CRYSTALYSE_PROVENANCE_DIR", "./provenance_output")),
+            "capture_raw": os.getenv("CRYSTALYSE_CAPTURE_RAW", "true").lower() == "true",
+            "capture_mcp_logs": os.getenv("CRYSTALYSE_CAPTURE_MCP_LOGS", "false").lower() == "true",
+            "session_prefix": os.getenv("CRYSTALYSE_SESSION_PREFIX", "crystalyse"),
+            "show_summary": os.getenv("CRYSTALYSE_SHOW_PROVENANCE_SUMMARY", "true").lower() == "true",
+            "visual_trace": os.getenv("CRYSTALYSE_VISUAL_TRACE", "true").lower() == "true"
         }
         
     def get_server_config(self, server_name: str) -> Dict[str, Any]:
