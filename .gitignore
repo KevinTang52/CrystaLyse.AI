@@ -210,4 +210,5 @@ PROVENANCE_TEST_RESULTS.md
 test_provenance_v2.py
 test_task1_all_modes.py
 /provenance_system/
+/tmp_provenance_files/
 
