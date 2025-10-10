@@ -211,4 +211,19 @@ test_provenance_v2.py
 test_task1_all_modes.py
 /provenance_system/
 /tmp_provenance_files/
+/provenance_output/
+
+# Development documentation (moved to dev-docs/)
+/dev-docs/
+
+# External repositories and libraries
+/SMACT/
+/mace/
+/modelcontextprotocol/
+/python-sdk/
+
+# Backup files
+*.backup
+*_backup.py
+server_old_backup.py
 
