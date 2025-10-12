@@ -37,17 +37,20 @@ class PredictionResult(BaseModel):
     error: Optional[str] = None
 
 
-def _get_device(prefer_gpu: bool = False):
-    """Get the computing device."""
+def _get_device(prefer_gpu: bool = True):
+    """Get the computing device - auto-detects GPU by default."""
     if prefer_gpu:
         if torch.cuda.is_available():
+            logger.info("Chemeleon using CUDA GPU")
             return "cuda"
         elif torch.backends.mps.is_available():
+            logger.info("Chemeleon using MPS (Apple Silicon)")
             return "mps"
+    logger.info("Chemeleon using CPU")
     return "cpu"
 
 
-def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer_gpu: bool = False):
+def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer_gpu: bool = True):
     """Load or retrieve cached Chemeleon model."""
     from chemeleon_dng.diffusion.diffusion_module import DiffusionModule
     from chemeleon_dng.script_util import create_diffusion_module

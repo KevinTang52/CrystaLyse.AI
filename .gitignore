@@ -216,6 +216,9 @@ test_task1_all_modes.py
 # Development documentation (moved to dev-docs/)
 /dev-docs/
 
+# Old backup directories
+/provenance_system_OLD_BACKUP/
+
 # External repositories and libraries
 /SMACT/
 /mace/

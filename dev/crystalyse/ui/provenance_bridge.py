@@ -12,7 +12,6 @@ Design:
 - Compatible with existing ToolTraceHandler interface
 """
 
-import sys
 import logging
 from pathlib import Path
 from typing import Optional
@@ -20,15 +19,9 @@ from datetime import datetime
 
 from rich.console import Console
 
-# Add provenance_system to Python path
-# Need to add parent directory of provenance_system to sys.path
-crystalyse_root = Path(__file__).parent.parent.parent.parent
-provenance_system_path = crystalyse_root / "provenance_system"
-if provenance_system_path.exists() and str(crystalyse_root) not in sys.path:
-    sys.path.insert(0, str(crystalyse_root))
-
+# Import from internal provenance system
 try:
-    from provenance_system.handlers import ProvenanceTraceHandler
+    from ..provenance.handlers import ProvenanceTraceHandler
     PROVENANCE_AVAILABLE = True
 except ImportError as e:
     PROVENANCE_AVAILABLE = False
