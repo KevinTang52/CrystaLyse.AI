@@ -18,6 +18,7 @@ from ..core.pydantic_serializer import (
     serialize_pydantic_model,
     create_enhanced_material_record
 )
+from ..value_registry import ProvenanceValueRegistry, get_global_registry
 
 # Base class for trace handling (using duck typing to avoid circular import)
 class ToolTraceHandler:
@@ -227,6 +228,17 @@ class ProvenanceTraceHandler(ToolTraceHandler):
             # Log each material with enhanced metadata
             for material in materials:
                 self.materials_logger.log("material", material.to_dict())
+
+        # Register with value registry for render gate
+        registry = get_global_registry()
+        if registry and mcp_tool:
+            registry.register_tool_output(
+                tool_name=mcp_tool,
+                tool_call_id=call_id,
+                input_data={},  # Could extract from tool_call.args if needed
+                output_data=serialized_output,
+                timestamp=datetime.now().isoformat()
+            )
 
         # Create enhanced material record for Phase 1.5 tools
         if mcp_tool and mcp_tool.startswith(('validate_', 'calculate_', 'analyze_', 'predict_', 'generate_')):

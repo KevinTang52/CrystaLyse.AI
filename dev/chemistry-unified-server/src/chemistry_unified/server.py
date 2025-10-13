@@ -186,7 +186,7 @@ def predict_band_gap(composition: str) -> BandGapResult:
 async def generate_crystal_csp(
     formulas: Union[str, List[str]],
     num_samples: int = 1,
-    prefer_gpu: bool = False
+    prefer_gpu: bool = True
 ) -> PredictionResult:
     """
     Generate crystal structures using Chemeleon CSP.

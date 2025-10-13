@@ -260,11 +260,40 @@ class EnhancedCrystaLyseAgent:
                         except Exception as e:
                             logger.debug(f"Could not extract final result: {e}")
 
+                # Apply render gate if enabled
+                if self.config.render_gate.get("enabled", True):
+                    from ..provenance.render_gate import IntelligentRenderGate
+                    from ..provenance.value_registry import get_global_registry
+
+                    gate = IntelligentRenderGate(provenance_tracker=get_global_registry())
+
+                    # Process response through render gate
+                    processed_response, detected_numbers, has_violations = gate.analyze_output(
+                        final_response
+                    )
+
+                    if has_violations and self.config.render_gate.get("log_violations", True):
+                        logger.warning(f"Render gate detected unprovenanced material properties")
+
+                    # Update response with processed version
+                    final_response = processed_response
+
+                    # Add render gate statistics to result
+                    render_gate_stats = {
+                        "enabled": True,
+                        "violations_detected": has_violations,
+                        "blocked_count": gate.blocked_count,
+                        "allowed_count": gate.allowed_count
+                    }
+                else:
+                    render_gate_stats = {"enabled": False}
+
                 # Build result dictionary
                 result = {
                     "status": "completed",
                     "query": query,
                     "response": final_response,
+                    "render_gate": render_gate_stats,
                 }
 
                 # Add provenance information if handler is provenance-aware

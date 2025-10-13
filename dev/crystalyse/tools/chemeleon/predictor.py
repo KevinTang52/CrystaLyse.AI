@@ -161,7 +161,7 @@ class ChemeleonPredictor:
         formula: str,
         num_samples: int = 1,
         checkpoint_path: Optional[str] = None,
-        prefer_gpu: bool = False
+        prefer_gpu: bool = True
     ) -> PredictionResult:
         """Predict crystal structure for a formula."""
         import time
@@ -221,7 +221,7 @@ class ChemeleonPredictor:
         formula: str,
         num_samples: int = 1,
         checkpoint_path: Optional[str] = None,
-        prefer_gpu: bool = False
+        prefer_gpu: bool = True
     ) -> PredictionResult:
         """Synchronous version of predict_structure."""
         import asyncio
