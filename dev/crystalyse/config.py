@@ -79,7 +79,15 @@ class CrystaLyseConfig:
             "show_summary": os.getenv("CRYSTALYSE_SHOW_PROVENANCE_SUMMARY", "true").lower() == "true",
             "visual_trace": os.getenv("CRYSTALYSE_VISUAL_TRACE", "true").lower() == "true"
         }
-        
+
+        # Render Gate Configuration (Intelligent hallucination prevention)
+        self.render_gate = {
+            "enabled": os.getenv("CRYSTALYSE_RENDER_GATE", "true").lower() == "true",
+            "strictness": os.getenv("CRYSTALYSE_RENDER_GATE_STRICTNESS", "intelligent"),  # strict/intelligent/permissive
+            "log_violations": os.getenv("CRYSTALYSE_RENDER_GATE_LOG", "true").lower() == "true",
+            "block_unprovenanced": os.getenv("CRYSTALYSE_BLOCK_UNPROVENANCED", "true").lower() == "true"
+        }
+
     def get_server_config(self, server_name: str) -> Dict[str, Any]:
         """Get MCP server configuration with validation"""
         if server_name not in self.mcp_servers:

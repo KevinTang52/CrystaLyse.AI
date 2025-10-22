@@ -1,1 +1,0 @@
-"""PyMatgen MCP Server - Materials Project analysis tools for CrystaLyse.AI."""

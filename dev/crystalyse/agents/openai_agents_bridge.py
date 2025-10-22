@@ -180,8 +180,9 @@ class EnhancedCrystaLyseAgent:
                     import time
 
                     # Use integer timestamp to avoid dots in trace_id (SDK requirement)
+                    # IMPORTANT: trace_id MUST start with 'trace_' per OpenAI API requirements
                     trace_timestamp = int(time.time())
-                    trace_id = f"crystalyse_{self.session_id}_{trace_timestamp}"
+                    trace_id = f"trace_crystalyse_{self.session_id}_{trace_timestamp}"
 
                     mdg_api_key = os.getenv("OPENAI_MDG_API_KEY") or os.getenv("OPENAI_API_KEY")
                     if mdg_api_key:
@@ -198,42 +199,28 @@ class EnhancedCrystaLyseAgent:
                     logger.warning(f"Could not create RunConfig with API key: {e}")
                 
                 final_response = "No response generated."
+                logger.info(f"Selected model: {selected_model}, trace_handler: {trace_handler is not None}, session: {session is not None}")
                 async with asyncio.timeout(timeout_seconds):
-                    # Use non-streaming mode for o3 model to avoid organization verification requirement
-                    if selected_model == "o3":
-                        run_args = {
-                            "starting_agent": sdk_agent,
-                            "input": query,
-                            "session": session,
-                            "max_turns": 1000
-                        }
-                        if run_config:
-                            run_args["run_config"] = run_config
-                            
-                        result = await Runner.run(**run_args)
-                        
-                        # Extract response from non-streaming result
-                        if hasattr(result, 'final_output') and result.final_output:
-                            final_response = result.final_output
-                        elif hasattr(result, 'items') and result.items:
-                            # Extract text from the last item
-                            last_item = result.items[-1]
-                            if hasattr(last_item, 'content'):
-                                final_response = last_item.content
+                    # Always use streaming mode to ensure provenance capture works for all models
+                    if False:  # Disabled non-streaming path - now all models use streaming
+                        pass
                     else:
                         # Use streaming for other models
                         stream_args = {
                             "starting_agent": sdk_agent,
                             "input": query,
-                            "session": session,
+                            "context": session,  # Fixed: was "session", should be "context"
                             "max_turns": 1000
                         }
                         if run_config:
                             stream_args["run_config"] = run_config
-                            
+
+                        logger.info(f"Using streaming mode, trace_handler present: {trace_handler is not None}")
                         result = Runner.run_streamed(**stream_args)
-                        
+
+                        event_count = 0
                         async for event in result.stream_events():
+                            event_count += 1
                             if trace_handler:
                                 trace_handler.on_event(event)
                             
@@ -247,6 +234,8 @@ class EnhancedCrystaLyseAgent:
                                     if reasoning_content and len(reasoning_content) > 50:  # Substantial content
                                         final_response = reasoning_content
                         
+                        logger.info(f"Processed {event_count} events from stream")
+
                         # Also try to get the final result after streaming
                         try:
                             final_result = await result
@@ -260,11 +249,40 @@ class EnhancedCrystaLyseAgent:
                         except Exception as e:
                             logger.debug(f"Could not extract final result: {e}")
 
+                # Apply render gate if enabled
+                if self.config.render_gate.get("enabled", True):
+                    from ..provenance.render_gate import IntelligentRenderGate
+                    from ..provenance.value_registry import get_global_registry
+
+                    gate = IntelligentRenderGate(provenance_tracker=get_global_registry())
+
+                    # Process response through render gate
+                    processed_response, detected_numbers, has_violations = gate.analyze_output(
+                        final_response
+                    )
+
+                    if has_violations and self.config.render_gate.get("log_violations", True):
+                        logger.warning(f"Render gate detected unprovenanced material properties")
+
+                    # Update response with processed version
+                    final_response = processed_response
+
+                    # Add render gate statistics to result
+                    render_gate_stats = {
+                        "enabled": True,
+                        "violations_detected": has_violations,
+                        "blocked_count": gate.blocked_count,
+                        "allowed_count": gate.allowed_count
+                    }
+                else:
+                    render_gate_stats = {"enabled": False}
+
                 # Build result dictionary
                 result = {
                     "status": "completed",
                     "query": query,
                     "response": final_response,
+                    "render_gate": render_gate_stats,
                 }
 
                 # Add provenance information if handler is provenance-aware
