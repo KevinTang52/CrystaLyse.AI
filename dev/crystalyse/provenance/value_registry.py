@@ -149,6 +149,33 @@ class ProvenanceValueRegistry:
         Returns:
             ProvenanceTuple if found, None otherwise
         """
+        # Special handling for zero/near-zero values
+        # Use wider tolerance since LLM often rounds to 0
+        if abs(value) < 0.01:
+            # Search for small values with wider tolerance
+            wide_tolerance = 0.5  # Allow matching values up to ±0.5
+            for test_value, prov_values in self.registry.items():
+                if abs(test_value - value) < wide_tolerance:
+                    if material:
+                        for prov_value in prov_values:
+                            if prov_value.material == material:
+                                return prov_value.to_tuple()
+                    if prov_values:
+                        return prov_values[0].to_tuple()
+
+            # Also check artifact tracker with wider tolerance
+            matches = self.artifact_tracker.lookup_value(value, wide_tolerance)
+            if matches:
+                artifact, extracted = matches[0]
+                return ProvenanceTuple(
+                    value=extracted.value,
+                    unit=extracted.unit,
+                    source_tool=artifact.tool_name,
+                    artifact_hash=artifact.output_hash,
+                    timestamp=artifact.timestamp,
+                    confidence=artifact.confidence
+                )
+
         # Try exact match first
         if value in self.registry:
             candidates = self.registry[value]

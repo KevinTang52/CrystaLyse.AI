@@ -179,6 +179,14 @@ class ArtifactTracker:
         """
         extracted = []
 
+        # Handle OpenAI SDK wrapper format: {"type": "text", "text": "{JSON}"}
+        if isinstance(output_data, dict) and output_data.get("type") == "text" and "text" in output_data:
+            try:
+                output_data = json.loads(output_data["text"])
+            except (json.JSONDecodeError, TypeError):
+                # If parsing fails, continue with original data
+                pass
+
         if isinstance(output_data, dict):
             # Extract based on known patterns for each tool
 
@@ -189,6 +197,24 @@ class ArtifactTracker:
                     original_string=str(output_data["formation_energy"]),
                     unit=output_data.get("unit", "eV/atom"),
                     property_type="formation_energy"
+                ))
+
+            # Energy per atom (often same as formation energy but explicitly listed)
+            if "energy_per_atom" in output_data and output_data["energy_per_atom"] is not None:
+                extracted.append(ExtractedValue(
+                    value=float(output_data["energy_per_atom"]),
+                    original_string=str(output_data["energy_per_atom"]),
+                    unit=output_data.get("unit", "eV/atom"),
+                    property_type="energy_per_atom"
+                ))
+
+            # Total energy (system total)
+            if "total_energy" in output_data and output_data["total_energy"] is not None:
+                extracted.append(ExtractedValue(
+                    value=float(output_data["total_energy"]),
+                    original_string=str(output_data["total_energy"]),
+                    unit=output_data.get("unit", "eV"),
+                    property_type="total_energy"
                 ))
 
             # Band gap
