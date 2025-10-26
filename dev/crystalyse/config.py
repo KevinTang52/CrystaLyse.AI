@@ -110,9 +110,7 @@ class CrystaLyseConfig:
         
         # Construct the PYTHONPATH
         python_path = [str(self.base_dir)]
-        chemeleon_dng_path = "/home/ryan/mycrystalyse/CrystaLyse.AI/chemeleon-dng"
-        if chemeleon_dng_path not in python_path:
-            python_path.append(chemeleon_dng_path)
+        # chemeleon-dng is now a proper pip package, no need for hardcoded paths
         
         existing_python_path = config["env"].get("PYTHONPATH")
         if existing_python_path:

@@ -65,17 +65,23 @@ def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer
     logger.info(f"Loading new model for {cache_key}")
 
     # Download checkpoint if needed
+    # Use chemeleon-dng's built-in checkpoint download system
+    # It will auto-download to ~/.cache/chemeleon_dng/ if not present
     if checkpoint_path is None:
-        checkpoint_dir = os.getenv(
-            "CHEMELEON_CHECKPOINT_DIR",
-            "/home/ryan/mycrystalyse/CrystaLyse.AI/dev/ckpts"
-        )
-        default_paths = {
-            "csp": str(os.path.join(checkpoint_dir, "chemeleon_csp_alex_mp_20_v0.0.2.ckpt")),
-            "dng": str(os.path.join(checkpoint_dir, "chemeleon_dng_alex_mp_20_v0.0.2.ckpt")),
-            "guide": "."
-        }
-        checkpoint_path = get_checkpoint_path(task=task, default_paths=default_paths)
+        # Try user-specified directory first, then fall back to auto-download
+        checkpoint_dir = os.getenv("CHEMELEON_CHECKPOINT_DIR")
+
+        if checkpoint_dir and os.path.exists(checkpoint_dir):
+            # User specified a custom checkpoint directory
+            default_paths = {
+                "csp": str(os.path.join(checkpoint_dir, "chemeleon_csp_alex_mp_20_v0.0.2.ckpt")),
+                "dng": str(os.path.join(checkpoint_dir, "chemeleon_dng_alex_mp_20_v0.0.2.ckpt")),
+                "guide": "."
+            }
+            checkpoint_path = get_checkpoint_path(task=task, default_paths=default_paths)
+        else:
+            # Let chemeleon-dng auto-download to its cache directory
+            checkpoint_path = get_checkpoint_path(task=task, default_paths=None)
 
     # Load model
     device = _get_device(prefer_gpu=prefer_gpu)
@@ -149,11 +155,9 @@ class ChemeleonPredictor:
 
     def __init__(self, checkpoint_dir: Optional[str] = None):
         # Use environment variables for checkpoint paths
+        # Default to None to let chemeleon-dng auto-download
         if checkpoint_dir is None:
-            checkpoint_dir = os.getenv(
-                "CHEMELEON_CHECKPOINT_DIR",
-                "/home/ryan/mycrystalyse/CrystaLyse.AI/dev/ckpts"
-            )
+            checkpoint_dir = os.getenv("CHEMELEON_CHECKPOINT_DIR")
         self.checkpoint_dir = checkpoint_dir
 
     async def predict_structure(
@@ -165,38 +169,67 @@ class ChemeleonPredictor:
     ) -> PredictionResult:
         """Predict crystal structure for a formula."""
         import time
+        import tempfile
+        import os
+        import json
+        from pathlib import Path
+
         start_time = time.time()
 
         try:
-            from pymatgen.core import Composition
+            from chemeleon_dng.sample import sample as chemeleon_sample
+            from ase.io import read as ase_read
 
-            # Load model
-            model = _load_model(task="csp", checkpoint_path=checkpoint_path, prefer_gpu=prefer_gpu)
+            # Determine device
+            device = None
+            if not prefer_gpu:
+                device = "cpu"
+            # If prefer_gpu=True, device=None will auto-select CUDA or CPU
 
-            # Parse formula
-            comp = Composition(formula)
+            # Create temporary output directory
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Run chemeleon-dng sample function
+                logger.info(f"Generating {num_samples} structures for {formula} using Chemeleon")
 
-            # Create atom_types and num_atoms for all samples
-            batch_atom_types = []
-            batch_num_atoms = []
+                chemeleon_sample(
+                    task="csp",
+                    formulas=formula,
+                    num_samples=num_samples,
+                    model_path=checkpoint_path,
+                    output_dir=tmpdir,
+                    device=device,
+                    save_json=True
+                )
 
-            for _ in range(num_samples):
-                atomic_numbers = [el.Z for el, amt in comp.items() for _ in range(int(amt))]
-                batch_atom_types.extend(atomic_numbers)
-                batch_num_atoms.append(len(atomic_numbers))
+                # Read generated structures from JSON (chemeleon-dng saves to generated_structures.json.gz)
+                json_file = Path(tmpdir) / "generated_structures.json.gz"
 
-            # Sample structures
-            samples = model.sample(
-                task="csp",
-                atom_types=batch_atom_types,
-                num_atoms=batch_num_atoms
-            )
+                if not json_file.exists():
+                    raise FileNotFoundError(f"Expected output file not found: {json_file}")
 
-            # Convert to structure models
-            structures = []
-            for atoms in samples:
-                struct = _atoms_to_structure_dict(atoms, formula)
-                structures.append(struct)
+                import gzip
+                with gzip.open(json_file, 'rt') as f:
+                    data = json.load(f)
+
+                # Convert to structure models
+                # Data is a list of Pymatgen Structure dicts
+                from pymatgen.core import Structure
+
+                structures = []
+                for entry in data:
+                    # Deserialize Pymatgen Structure
+                    pmg_struct = Structure.from_dict(entry)
+
+                    # Convert to our CrystalStructure model
+                    struct = CrystalStructure(
+                        formula=pmg_struct.composition.reduced_formula,
+                        cell=pmg_struct.lattice.matrix.tolist(),
+                        positions=pmg_struct.cart_coords.tolist(),
+                        numbers=[site.specie.Z for site in pmg_struct],
+                        symbols=[site.specie.symbol for site in pmg_struct],
+                        volume=float(pmg_struct.volume)
+                    )
+                    structures.append(struct)
 
             computation_time = time.time() - start_time
 
@@ -205,11 +238,12 @@ class ChemeleonPredictor:
                 formula=formula,
                 predicted_structures=structures,
                 computation_time=computation_time,
+                method="chemeleon-dng",
                 checkpoint_used=checkpoint_path or "default"
             )
 
         except Exception as e:
-            logger.error(f"Error in predict_structure: {e}")
+            logger.error(f"Error in predict_structure: {e}", exc_info=True)
             return PredictionResult(
                 success=False,
                 formula=formula,

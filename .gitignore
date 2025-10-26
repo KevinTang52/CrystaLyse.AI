@@ -187,9 +187,14 @@ all-runtime-output/
 
 # Local development directories
 chemeleon-dng/
+chemeleon-dng-src/
 openai-agents-python/
 *.pkl.gz
 icsd-scripts/
+
+# Chemeleon checkpoint files
+chemeleon_*.ckpt
+*.ckpt
 
 # Project-specific ignores
 /experiments/

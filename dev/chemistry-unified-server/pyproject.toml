@@ -13,6 +13,7 @@ dependencies = [
     "numpy",
     "smact",
     "mace-torch",
+    "chemeleon-dng @ git+https://github.com/hspark1212/chemeleon-dng.git",
 ]
 
 [project.scripts]
