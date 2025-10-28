@@ -1,13 +1,11 @@
-"""Chemeleon crystal structure prediction - extracted from MCP server."""
+"""Chemeleon crystal structure prediction using direct API (no file I/O)."""
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 import os
 import logging
-import tempfile
 
 import torch
 import ase
-from ase.io import write as ase_write
 
 logger = logging.getLogger(__name__)
 
@@ -167,71 +165,63 @@ class ChemeleonPredictor:
         checkpoint_path: Optional[str] = None,
         prefer_gpu: bool = True
     ) -> PredictionResult:
-        """Predict crystal structure for a formula."""
+        """
+        Predict crystal structure for a formula using direct API (no disk I/O).
+
+        This method uses the direct DiffusionModule API for in-memory structure generation,
+        avoiding temporary file I/O overhead and providing better error handling.
+
+        Args:
+            formula: Chemical formula (e.g., "TiO2", "GeSn")
+            num_samples: Number of structures to generate
+            checkpoint_path: Optional path to specific checkpoint file
+            prefer_gpu: Use GPU if available
+
+        Returns:
+            PredictionResult with structures or error information
+        """
         import time
-        import tempfile
-        import os
-        import json
-        from pathlib import Path
+        from pymatgen.core import Composition
 
         start_time = time.time()
 
         try:
-            from chemeleon_dng.sample import sample as chemeleon_sample
-            from ase.io import read as ase_read
+            # Load model (uses caching via _load_model)
+            model = _load_model(task="csp", checkpoint_path=checkpoint_path, prefer_gpu=prefer_gpu)
 
-            # Determine device
-            device = None
-            if not prefer_gpu:
-                device = "cpu"
-            # If prefer_gpu=True, device=None will auto-select CUDA or CPU
+            # Parse formula to get atomic composition
+            comp = Composition(formula)
 
-            # Create temporary output directory
-            with tempfile.TemporaryDirectory() as tmpdir:
-                # Run chemeleon-dng sample function
-                logger.info(f"Generating {num_samples} structures for {formula} using Chemeleon")
+            # Prepare batched input for all samples
+            # Chemeleon expects: atom_types (flat list of atomic numbers for all samples)
+            #                    num_atoms (list of atom counts per sample)
+            batch_atom_types = []
+            batch_num_atoms = []
 
-                chemeleon_sample(
-                    task="csp",
-                    formulas=formula,
-                    num_samples=num_samples,
-                    model_path=checkpoint_path,
-                    output_dir=tmpdir,
-                    device=device,
-                    save_json=True
-                )
+            for _ in range(num_samples):
+                atomic_numbers = [
+                    el.Z for el, amt in comp.items()
+                    for _ in range(int(amt))
+                ]
+                batch_atom_types.extend(atomic_numbers)
+                batch_num_atoms.append(len(atomic_numbers))
 
-                # Read generated structures from JSON (chemeleon-dng saves to generated_structures.json.gz)
-                json_file = Path(tmpdir) / "generated_structures.json.gz"
+            # Generate structures using direct API (in-memory, no disk I/O)
+            logger.info(f"Generating {num_samples} structure(s) for {formula} using Chemeleon CSP")
+            samples = model.sample(
+                task="csp",
+                atom_types=batch_atom_types,
+                num_atoms=batch_num_atoms
+            )
 
-                if not json_file.exists():
-                    raise FileNotFoundError(f"Expected output file not found: {json_file}")
-
-                import gzip
-                with gzip.open(json_file, 'rt') as f:
-                    data = json.load(f)
-
-                # Convert to structure models
-                # Data is a list of Pymatgen Structure dicts
-                from pymatgen.core import Structure
-
-                structures = []
-                for entry in data:
-                    # Deserialize Pymatgen Structure
-                    pmg_struct = Structure.from_dict(entry)
-
-                    # Convert to our CrystalStructure model
-                    struct = CrystalStructure(
-                        formula=pmg_struct.composition.reduced_formula,
-                        cell=pmg_struct.lattice.matrix.tolist(),
-                        positions=pmg_struct.cart_coords.tolist(),
-                        numbers=[site.specie.Z for site in pmg_struct],
-                        symbols=[site.specie.symbol for site in pmg_struct],
-                        volume=float(pmg_struct.volume)
-                    )
-                    structures.append(struct)
+            # Convert ASE Atoms objects to CrystalStructure models
+            structures = [
+                _atoms_to_structure_dict(atoms, formula)
+                for atoms in samples
+            ]
 
             computation_time = time.time() - start_time
+            logger.info(f"Generated {len(structures)} structure(s) in {computation_time:.2f}s")
 
             return PredictionResult(
                 success=True,
@@ -243,11 +233,26 @@ class ChemeleonPredictor:
             )
 
         except Exception as e:
-            logger.error(f"Error in predict_structure: {e}", exc_info=True)
+            logger.error(f"Structure prediction failed for {formula}: {e}", exc_info=True)
+
+            # Provide helpful error context
+            error_msg = str(e)
+            if "checkpoint" in error_msg.lower():
+                error_msg = (
+                    f"Checkpoint loading failed: {e}\n"
+                    f"Try setting CHEMELEON_CHECKPOINT_DIR environment variable "
+                    f"or ensure checkpoints are available in ~/.cache/chemeleon_dng/"
+                )
+            elif "cuda" in error_msg.lower() or "gpu" in error_msg.lower():
+                error_msg = (
+                    f"GPU error: {e}\n"
+                    f"Try running with prefer_gpu=False to use CPU instead"
+                )
+
             return PredictionResult(
                 success=False,
                 formula=formula,
-                error=str(e)
+                error=error_msg
             )
 
     def predict_structure_sync(

@@ -107,16 +107,10 @@ class CrystaLyseConfig:
             
         # Add environment variables
         config["env"] = os.environ.copy()
-        
-        # Construct the PYTHONPATH
-        python_path = [str(self.base_dir)]
-        # chemeleon-dng is now a proper pip package, no need for hardcoded paths
-        
-        existing_python_path = config["env"].get("PYTHONPATH")
-        if existing_python_path:
-            python_path.append(existing_python_path)
-            
-        config["env"]["PYTHONPATH"] = os.pathsep.join(python_path)
+
+        # Note: PYTHONPATH manipulation removed in favor of proper dependency declaration
+        # MCP server packages now declare 'crystalyse' as a dependency in their pyproject.toml
+        # This ensures clean imports without manual path manipulation
 
         if self.debug_mode:
             config["env"]["CRYSTALYSE_DEBUG"] = "true"
