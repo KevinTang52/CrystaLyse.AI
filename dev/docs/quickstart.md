@@ -9,7 +9,8 @@ Get up and running with CrystaLyse.AI in minutes. This guide covers installation
 - Python 3.11 or higher
 - OpenAI API key
 - 8GB RAM recommended (4GB minimum)
-- Internet connection for model downloads
+- Internet connection for first-run Chemeleon checkpoint download (~523 MB, automatic)
+- Storage: ~600MB for Chemeleon model checkpoints (auto-cached in `~/.cache/`)
 
 ### Quick Install
 
@@ -40,6 +41,8 @@ Get up and running with CrystaLyse.AI in minutes. This guide covers installation
    ```bash
    crystalyse --help
    ```
+
+**Note on First Run**: On first execution, CrystaLyse.AI will auto-download ~600MB of Chemeleon model checkpoints to `~/.cache/crystalyse/chemeleon_checkpoints/`. This one-time download takes 2-5 minutes depending on connection speed and includes a progress bar.
 
 ## Configuration
 

@@ -136,6 +136,28 @@ export CRYSTALYSE_SESSION_DB="/custom/sessions.db"
 **Type**: File path
 **Default**: `~/.crystalyse/sessions.db`
 
+##### `CHEMELEON_CHECKPOINT_DIR`
+Custom directory for Chemeleon model checkpoints.
+
+```bash
+export CHEMELEON_CHECKPOINT_DIR="/path/to/existing/checkpoints"
+```
+
+**Type**: Directory path
+**Default**: `~/.cache/crystalyse/chemeleon_checkpoints/` (auto-downloads if not set)
+**Optional**: Yes - zero configuration by default
+**Impact**: Allows offline installations or custom checkpoint locations (e.g., shared lab servers)
+**Requirements**: Directory must contain:
+- `chemeleon_csp_alex_mp_20_v0.0.2.ckpt` (141 MB)
+- `chemeleon_dng_alex_mp_20_v0.0.2.ckpt` (161 MB)
+
+**When to use**:
+- Offline installations (manual checkpoint download)
+- Shared multi-user systems with pre-downloaded checkpoints
+- Custom storage locations due to disk space constraints
+
+See [Installation Guide - Chemeleon Model Checkpoints](../guides/installation.md#chemeleon-model-checkpoints) for setup details.
+
 ## Configuration Files
 
 ### Default Configuration Location

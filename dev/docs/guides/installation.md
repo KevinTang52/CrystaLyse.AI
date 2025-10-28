@@ -10,8 +10,8 @@ This guide provides comprehensive instructions for installing CrystaLyse.AI on v
 
 - **Python**: 3.11 or higher
 - **RAM**: 8GB minimum (16GB recommended)
-- **Storage**: 5GB free space for installation and models
-- **Network**: Internet connection for package downloads and API calls
+- **Storage**: 5GB for installation + ~600MB for Chemeleon model checkpoints (auto-downloaded)
+- **Network**: Internet connection for package downloads, API calls, and first-run Chemeleon checkpoint download (~523MB)
 - **Operating System**: 
   - Linux (Ubuntu 20.04+, CentOS 8+, RHEL 8+)
   - macOS 11+ (Big Sur or later)
@@ -60,6 +60,63 @@ pip install -e ./visualization-mcp-server      # 3D visualization and analysis
 ```
 
 **Note**: MCP servers are thin wrappers over `crystalyse.tools.*` modules. Installation order matters!
+
+### Chemeleon Model Checkpoints
+
+Chemeleon requires ML model checkpoints (~600 MB) for crystal structure prediction.
+
+#### Zero-Configuration Auto-Download (Recommended)
+
+Checkpoints auto-download on first use - **no manual setup needed**:
+
+- **Location**: `~/.cache/crystalyse/chemeleon_checkpoints/`
+- **Download Source**: Figshare (automatic, ~523 MB total)
+- **Time**: First-run download takes 2-5 minutes depending on connection
+- **One-time**: Checkpoints cached permanently after download
+- **No Configuration Needed**: Works automatically without environment variables
+
+**First Run Experience**:
+```bash
+crystalyse analyse "Find stable perovskites"
+# Downloads checkpoints on first use with progress bar:
+# Downloading checkpoints.tar.gz: 100%|██████████| 523M/523M [00:05<00:00, 103MB/s]
+# Extracting checkpoint files...
+# Checkpoint setup complete: ~/.cache/crystalyse/chemeleon_checkpoints/
+```
+
+#### Custom Checkpoint Directory (Advanced)
+
+If you need checkpoints in a specific location (e.g., shared lab server):
+
+```bash
+export CHEMELEON_CHECKPOINT_DIR="/path/to/existing/checkpoints"
+crystalyse analyse "..."  # Uses custom directory
+```
+
+The directory must contain:
+- `chemeleon_csp_alex_mp_20_v0.0.2.ckpt` (141 MB)
+- `chemeleon_dng_alex_mp_20_v0.0.2.ckpt` (161 MB)
+
+#### Manual Setup (Offline Installation)
+
+For offline installations or to pre-download checkpoints:
+
+```bash
+# On machine with internet:
+wget https://figshare.com/ndownloader/files/54966305 -O checkpoints.tar.gz
+
+# Transfer to offline machine and extract:
+mkdir -p ~/.cache/crystalyse/chemeleon_checkpoints
+tar -xzf checkpoints.tar.gz -C ~/.cache/crystalyse/
+
+# Verify:
+ls ~/.cache/crystalyse/chemeleon_checkpoints/*.ckpt
+# Should show:
+#   chemeleon_csp_alex_mp_20_v0.0.2.ckpt
+#   chemeleon_dng_alex_mp_20_v0.0.2.ckpt
+```
+
+Checkpoint management is handled by `crystalyse/tools/chemeleon/checkpoint_manager.py`.
 
 ## Platform-Specific Instructions
 

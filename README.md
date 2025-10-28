@@ -359,6 +359,8 @@ crystalyse
 **System Requirements**:
 - Python 3.11+
 - 8GB RAM minimum (16GB recommended)
+- Storage: 5GB for installation + ~600MB for Chemeleon model checkpoints (auto-downloaded to `~/.cache/`)
+- Internet: Required for first-run checkpoint download (~523MB from Figshare)
 - OpenAI API key
 - Optional: NVIDIA GPU for MACE acceleration
 
