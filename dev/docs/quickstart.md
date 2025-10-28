@@ -27,18 +27,13 @@ Get up and running with CrystaLyse.AI in minutes. This guide covers installation
 
 3. **Install CrystaLyse.AI:**
    ```bash
-   # Install core package
+   # Step 1: Install core package FIRST (required)
    pip install -e .
-   
-   # Install individual tool servers (required dependencies)
-   pip install -e ./oldmcpservers/smact-mcp-server
-   pip install -e ./oldmcpservers/chemeleon-mcp-server
-   pip install -e ./oldmcpservers/mace-mcp-server
-   
-   # Install unified MCP servers
-   pip install -e ./chemistry-unified-server
-   pip install -e ./chemistry-creative-server
-   pip install -e ./visualization-mcp-server
+
+   # Step 2: Install MCP servers (they depend on core package)
+   pip install -e ./chemistry-unified-server      # Complete validation mode
+   pip install -e ./chemistry-creative-server     # Fast exploration mode
+   pip install -e ./visualization-mcp-server      # 3D visualization
    ```
 
 4. **Verify installation:**

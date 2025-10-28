@@ -45,20 +45,21 @@ pip install -e .
 
 ### MCP Server Installation
 
-Install the required tool servers and unified servers:
+**Important**: Install core package first, then MCP servers (they depend on `crystalyse` package).
+
 ```bash
-# Install individual tool servers (required dependencies)
-pip install -e ./oldmcpservers/smact-mcp-server
-pip install -e ./oldmcpservers/chemeleon-mcp-server
-pip install -e ./oldmcpservers/mace-mcp-server
+# Step 1: Install core package FIRST (required)
+# From the dev/ directory where pyproject.toml is located
+pip install -e .
 
-# Install unified chemistry servers
-pip install -e ./chemistry-unified-server      # Rigorous mode
-pip install -e ./chemistry-creative-server     # Creative mode
-
-# Install visualisation server
-pip install -e ./visualization-mcp-server
+# Step 2: Install MCP servers (they import from crystalyse.tools.*)
+# MCP servers declare crystalyse as a dependency - no PYTHONPATH manipulation needed
+pip install -e ./chemistry-unified-server      # Complete validation mode (SMACT + Chemeleon + MACE)
+pip install -e ./chemistry-creative-server     # Fast exploration mode (Chemeleon + MACE)
+pip install -e ./visualization-mcp-server      # 3D visualization and analysis
 ```
+
+**Note**: MCP servers are thin wrappers over `crystalyse.tools.*` modules. Installation order matters!
 
 ## Platform-Specific Instructions
 

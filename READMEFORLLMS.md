@@ -238,19 +238,19 @@ python3.11 -m venv crystalyse-dev
 source crystalyse-dev/bin/activate  # Linux/macOS
 # crystalyse-dev\Scripts\activate  # Windows
 
-# Install in development mode
+# Navigate to dev directory (where pyproject.toml is located)
+cd dev
+
+# Step 1: Install core package in development mode FIRST
 pip install -e .
 
-# Install all dependencies including dev tools
+# Step 2: Install all dependencies including dev tools (optional)
 pip install -e ".[dev]"
 
-# Install MCP servers (required for functionality)
-pip install -e ./oldmcpservers/smact-mcp-server
-pip install -e ./oldmcpservers/chemeleon-mcp-server
-pip install -e ./oldmcpservers/mace-mcp-server
-pip install -e ./chemistry-unified-server
-pip install -e ./chemistry-creative-server
-pip install -e ./visualization-mcp-server
+# Step 3: Install MCP servers (they depend on core package from Step 1)
+pip install -e ./chemistry-unified-server      # Complete validation mode
+pip install -e ./chemistry-creative-server     # Fast exploration mode
+pip install -e ./visualization-mcp-server      # 3D visualization
 ```
 
 ---

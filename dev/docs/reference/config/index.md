@@ -172,22 +172,19 @@ mcp_servers:
     command: "python"
     args: ["-m", "chemistry_unified.server"]
     cwd: "./chemistry-unified-server/src"
-    env:
-      PYTHONPATH: "./chemistry-unified-server/src"
-  
+    # Note: PYTHONPATH no longer needed - server declares crystalyse as dependency
+
   chemistry_creative:
     command: "python"
     args: ["-m", "chemistry_creative.server"]
     cwd: "./chemistry-creative-server/src"
-    env:
-      PYTHONPATH: "./chemistry-creative-server/src"
-  
+    # Note: PYTHONPATH no longer needed - server declares crystalyse as dependency
+
   visualization:
     command: "python"
     args: ["-m", "visualization_mcp.server"]
     cwd: "./visualization-mcp-server/src"
-    env:
-      PYTHONPATH: "./visualization-mcp-server/src"
+    # Note: PYTHONPATH no longer needed - server declares crystalyse as dependency
 
 logging:
   level: "INFO"
