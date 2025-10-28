@@ -237,4 +237,6 @@ test_task1_all_modes.py
 *.backup
 *_backup.py
 server_old_backup.py
+codex/
+
 

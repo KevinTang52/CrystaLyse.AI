@@ -52,7 +52,7 @@ def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer
     """Load or retrieve cached Chemeleon model."""
     from chemeleon_dng.diffusion.diffusion_module import DiffusionModule
     from chemeleon_dng.script_util import create_diffusion_module
-    from chemeleon_dng.download_util import get_checkpoint_path
+    from .checkpoint_manager import get_checkpoint_path as get_managed_checkpoint_path
 
     cache_key = f"{task}_{checkpoint_path or 'default'}"
 
@@ -62,27 +62,17 @@ def _load_model(task: str = "csp", checkpoint_path: Optional[str] = None, prefer
 
     logger.info(f"Loading new model for {cache_key}")
 
-    # Download checkpoint if needed
-    # Use chemeleon-dng's built-in checkpoint download system
-    # It will auto-download to ~/.cache/chemeleon_dng/ if not present
+    # Get checkpoint path using our checkpoint manager
+    # This handles auto-download to ~/.cache/crystalyse/chemeleon_checkpoints/
+    # or uses custom directory from CHEMELEON_CHECKPOINT_DIR environment variable
     if checkpoint_path is None:
-        # Try user-specified directory first, then fall back to auto-download
-        checkpoint_dir = os.getenv("CHEMELEON_CHECKPOINT_DIR")
-
-        if checkpoint_dir and os.path.exists(checkpoint_dir):
-            # User specified a custom checkpoint directory
-            default_paths = {
-                "csp": str(os.path.join(checkpoint_dir, "chemeleon_csp_alex_mp_20_v0.0.2.ckpt")),
-                "dng": str(os.path.join(checkpoint_dir, "chemeleon_dng_alex_mp_20_v0.0.2.ckpt")),
-                "guide": "."
-            }
-            checkpoint_path = get_checkpoint_path(task=task, default_paths=default_paths)
-        else:
-            # Let chemeleon-dng auto-download to its cache directory
-            checkpoint_path = get_checkpoint_path(task=task, default_paths=None)
+        # Check for custom checkpoint directory (optional)
+        custom_dir = os.getenv("CHEMELEON_CHECKPOINT_DIR")
+        checkpoint_path = str(get_managed_checkpoint_path(task=task, custom_dir=custom_dir))
 
     # Load model
     device = _get_device(prefer_gpu=prefer_gpu)
+    logger.info(f"Loading checkpoint: {checkpoint_path}")
     logger.info(f"Loading model on device: {device}")
 
     # Handle version compatibility for DiffusionModule
