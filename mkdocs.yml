@@ -10,30 +10,33 @@ copyright: Copyright &copy; 2025 Crystalyse Development Team
 # Theme configuration
 theme:
   name: material
+  custom_dir: docs/overrides
   language: en
   palette:
     # Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue
-      accent: cyan
+      primary: black
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     # Dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue
-      accent: cyan
+      primary: black
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: Inter
+    code: JetBrains Mono
   
   features:
+    - navigation.instant
+    - navigation.tracking
     - navigation.tabs
     - navigation.sections
     - navigation.expand
@@ -55,6 +58,7 @@ theme:
     repo: fontawesome/brands/github
     edit: material/pencil 
     view: material/eye
+    logo: material/molecule
 
 # Documentation structure
 nav:
