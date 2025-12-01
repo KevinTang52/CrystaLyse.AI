@@ -164,7 +164,9 @@ Memory system provides four layers:
 The agent implements three-tier safety filtering:
 
 **Tier 1** (Automatic refusal) - Explosive materials, toxic heavy metals, chemical weapon precursors
+
 **Tier 2** (Context review) - Ambiguous requests requiring additional clarification
+
 **Tier 3** (Safe execution) - Legitimate safety applications (fire-resistant ceramics, biocompatible implants)
 
 Sustainability awareness includes earth-abundant element prioritisation (Fe, Al, Si over rare earths) and critical element flagging (Co, In, Ga dependencies).
