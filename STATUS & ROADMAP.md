@@ -115,6 +115,18 @@ Current vulnerabilities: 25% failure rate on disguised toxic requests and high-e
 
 ### Near-Term (v1.1-v1.2)
 
+**Workspace Management Integration**
+- Complete integration of file operation system (`crystalyse/workspace/`)
+- Enhanced approval workflows with preview capabilities
+- Improved clarification system integration
+- Context-aware file suggestions
+
+**Enhanced Memory System**
+- Production-ready cross-session context (`crystalyse/memory/`)
+- Refined user preference learning algorithms
+- Temporal decay models for preference weighting
+- Multi-user collaboration support
+
 **Plugin Interface for Custom Tools**
 - MCP-compatible plugin architecture
 - Standardised tool interfaces
@@ -154,19 +166,14 @@ Current vulnerabilities: 25% failure rate on disguised toxic requests and high-e
 ### Long-Term (v2.1+)
 
 **Multimodal Interface**
-- Web interface with real-time collaboration
+- VScode extension interface with enhanced visual feedback
 - Visual workflow management
 - Educational environments
 
 **Experimental Integration**
-- Direct synthesis equipment connectivity
-- Characterisation data feedback
-- Automated experimental design
+- Direct synthesis agent integration (Sky) and perhaps equipment connectivity
+- Multimodal data feedback via file upload/reading
 
-**Cloud Deployment**
-- Scalable cloud-native architecture
-- Institutional deployment options
-- HPC integration
 
 **Advanced Safety**
 - Semantic safety classifiers
@@ -179,6 +186,7 @@ Current vulnerabilities: 25% failure rate on disguised toxic requests and high-e
 - Electronic, optical, magnetic properties require additional surrogates
 - Limited to inorganic crystals (organic/hybrid systems not supported)
 - Database-bounded discovery scope
+
 
 **Safety Vulnerabilities**
 - 25% failure rate on disguised toxic requests
@@ -194,6 +202,10 @@ Current vulnerabilities: 25% failure rate on disguised toxic requests and high-e
 - Consumer hardware limits throughput
 - ML force fields provide approximate energies
 - No direct DFT validation
+
+**Experimental Features**
+- Workspace management (`crystalyse/workspace/`) is scaffolded with basic file operations and clarification callbacks; full integration pending
+- Enhanced memory features (`crystalyse/memory/`) provide four-layer architecture but cross-session context and user preference learning are experimental; improved integration planned for near-term releases
 
 ## Architecture Principles
 
