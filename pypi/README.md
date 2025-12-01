@@ -1,4 +1,4 @@
-# CrystaLyse.AI
+# Crystalyse
 
 > **⚠️ DEPRECATED - This package has been replaced by [`crystalyse`](https://pypi.org/project/crystalyse/)**
 >
@@ -11,11 +11,11 @@
 >
 > **Migration**: Simply `pip uninstall crystalyse-ai && pip install crystalyse`
 >
-> **See**: [Migration Guide](https://github.com/ryannduma/CrystaLyse.AI/blob/master/pypi-v2/CHANGELOG.md#migration-guide)
+> **See**: [Migration Guide](https://github.com/ryannduma/Crystalyse/blob/master/pypi-v2/CHANGELOG.md#migration-guide)
 
 ---
 
-**CrystaLyse.AI - Autonomous AI agents for accelerated inorganic materials design through natural language interfaces**
+**Crystalyse - Autonomous AI agents for accelerated inorganic materials design through natural language interfaces**
 
 [![PyPI version](https://badge.fury.io/py/crystalyse-ai.svg)](https://badge.fury.io/py/crystalyse-ai)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -23,7 +23,7 @@
 
 > **Status: DEPRECATED - Use [`crystalyse`](https://pypi.org/project/crystalyse/) instead**
 
-CrystaLyse.AI is a computational materials design platform that accelerates materials exploration through AI-powered analysis and validation. Built on the OpenAI Agents framework with Model Context Protocol (MCP) integration, it provides a dual-mode system for rapid materials design workflows.
+Crystalyse is a computational materials design platform that accelerates materials exploration through AI-powered analysis and validation. Built on the OpenAI Agents framework with Model Context Protocol (MCP) integration, it provides a dual-mode system for rapid materials design workflows.
 
 ## 🚀 Quick Start
 
@@ -147,7 +147,7 @@ crystalyse sessions -u researcher
 
 ## 🔬 Scientific Integrity
 
-CrystaLyse.AI maintains computational honesty:
+Crystalyse maintains computational honesty:
 
 - **100% Traceability**: Every result traces to actual tool calculations
 - **Zero Fabrication**: No estimated or hallucinated numerical values
@@ -180,7 +180,7 @@ pip install -e .
 
 ## 🤝 Acknowledgments
 
-CrystaLyse.AI builds upon exceptional open-source tools:
+Crystalyse builds upon exceptional open-source tools:
 
 - **SMACT**: Semiconducting Materials by Analogy and Chemical Theory
 - **Chemeleon**: Crystal structure prediction with AI
@@ -190,7 +190,7 @@ CrystaLyse.AI builds upon exceptional open-source tools:
 
 ## 📚 Citation
 
-If you use CrystaLyse.AI in your research, please cite the underlying tools:
+If you use Crystalyse in your research, please cite the underlying tools:
 
 - **SMACT**: Davies et al., "SMACT: Semiconducting Materials by Analogy and Chemical Theory" JOSS 4, 1361 (2019)
 - **Chemeleon**: Park et al., "Exploration of crystal chemical space using text-guided generative artificial intelligence" Nature Communications (2025)
@@ -203,7 +203,7 @@ MIT License - see LICENSE for details.
 
 ## 🐛 Issues & Support
 
-Report issues on [GitHub Issues](https://github.com/ryannduma/CrystaLyse.AI/issues)
+Report issues on [GitHub Issues](https://github.com/ryannduma/Crystalyse/issues)
 
 ## 🔗 Links
 

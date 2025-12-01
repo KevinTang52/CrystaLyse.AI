@@ -1,7 +1,7 @@
 [project]
 name = "crystalyse"
 version = "1.0.0-dev"
-description = "CrystaLyse.AI v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design"
+description = "Crystalyse v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

@@ -1,5 +1,5 @@
 """
-Browser Session Pool for CrystaLyse.AI Visualization Pipeline
+Browser Session Pool for Crystalyse Visualization Pipeline
 
 This module provides efficient browser session management for pymatviz/kaleido
 to eliminate redundant browser instance creation and improve performance.

@@ -1,5 +1,5 @@
 """
-Gradient text effects for CrystaLyse.AI
+Gradient text effects for Crystalyse
 
 Provides gradient text rendering using Rich's styling capabilities.
 """
@@ -12,7 +12,7 @@ from enum import Enum
 
 
 class GradientStyle(Enum):
-    """Predefined gradient styles for CrystaLyse.AI."""
+    """Predefined gradient styles for Crystalyse."""
     CRYSTALYSE_BLUE = "crystalyse_blue"
     CRYSTALYSE_PURPLE = "crystalyse_purple"
     CRYSTALYSE_CYAN = "crystalyse_cyan"
@@ -200,13 +200,13 @@ def create_rainbow_text(text: str) -> Text:
 
 def create_crystalyse_branded_text(text: str) -> Text:
     """
-    Create text with CrystaLyse.AI brand colors.
+    Create text with Crystalyse brand colors.
     
     Args:
         text: Text to apply brand gradient to
         
     Returns:
-        Rich Text object with CrystaLyse.AI brand gradient
+        Rich Text object with Crystalyse brand gradient
     """
     return create_gradient_text(text, GradientStyle.CRYSTALYSE_BLUE)
 

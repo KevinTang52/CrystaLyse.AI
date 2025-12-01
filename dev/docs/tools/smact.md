@@ -1,6 +1,6 @@
 # SMACT - Semiconducting Materials from Analogy and Chemical Theory
 
-SMACT is a computational framework for rapid screening of materials compositions based on chemical analogy and electronegativity principles. In CrystaLyse.AI, SMACT serves as the primary composition validation tool in rigorous mode.
+SMACT is a computational framework for rapid screening of materials compositions based on chemical analogy and electronegativity principles. In Crystalyse, SMACT serves as the primary composition validation tool in rigorous mode.
 
 ## Overview
 
@@ -8,7 +8,7 @@ SMACT screens millions of possible chemical compositions to identify those most 
 
 **Key Principle**: Materials with similar chemical properties (oxidation states, electronegativity differences) to known stable compounds are more likely to be synthesisable.
 
-## Integration in CrystaLyse.AI
+## Integration in Crystalyse
 
 ### Availability by Mode
 - **Creative Mode**: ❌ Not included (for speed)
@@ -109,7 +109,7 @@ SMACT references a database of known stable compounds to assess feasibility:
 
 ## Practical Usage
 
-### In CrystaLyse.AI Workflows
+### In Crystalyse Workflows
 
 #### Rigorous Mode Analysis
 ```bash
@@ -300,7 +300,7 @@ SMACT continues to evolve with new features planned:
 
 ## Citation
 
-If you use SMACT through CrystaLyse.AI, please cite the original SMACT publications:
+If you use SMACT through Crystalyse, please cite the original SMACT publications:
 
 ```bibtex
 @article{park2024mapping,
@@ -350,7 +350,7 @@ If you use SMACT through CrystaLyse.AI, please cite the original SMACT publicati
 
 ## Summary
 
-SMACT provides the essential first step in rigorous materials validation, ensuring that computational resources are focused on chemically reasonable compositions. Its integration in CrystaLyse.AI's rigorous mode provides the foundation for reliable, scientifically grounded materials design workflows.
+SMACT provides the essential first step in rigorous materials validation, ensuring that computational resources are focused on chemically reasonable compositions. Its integration in Crystalyse's rigorous mode provides the foundation for reliable, scientifically grounded materials design workflows.
 
 **Key Benefits**:
 - Rapid composition screening (seconds to minutes)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# CrystaLyse.AI Installation Script
-# Automatically installs CrystaLyse.AI with proper Python 3.11+ environment setup
+# Crystalyse Installation Script
+# Automatically installs Crystalyse with proper Python 3.11+ environment setup
 
 set -e  # Exit on any error
 
@@ -139,7 +139,7 @@ create_venv() {
     print_success "Virtual environment created and activated"
 }
 
-# Function to install CrystaLyse.AI
+# Function to install Crystalyse
 install_crystalyse() {
     method="$1"
     extras="$2"
@@ -151,7 +151,7 @@ install_crystalyse() {
     
     case $method in
         "pip")
-            print_info "Installing CrystaLyse.AI using pip..."
+            print_info "Installing Crystalyse using pip..."
             pip install "$package_spec"
             ;;
         "uv")
@@ -159,7 +159,7 @@ install_crystalyse() {
                 print_info "Installing uv..."
                 pip install uv
             fi
-            print_info "Installing CrystaLyse.AI using uv..."
+            print_info "Installing Crystalyse using uv..."
             uv pip install "$package_spec"
             ;;
         *)
@@ -176,9 +176,9 @@ verify_installation() {
     # Check if crystalyse command is available
     if command_exists crystalyse; then
         version=$(crystalyse --version 2>/dev/null || echo "unknown")
-        print_success "CrystaLyse.AI installed successfully: $version"
+        print_success "Crystalyse installed successfully: $version"
     else
-        print_error "CrystaLyse.AI command not found"
+        print_error "Crystalyse command not found"
         return 1
     fi
     
@@ -214,7 +214,7 @@ setup_config() {
 # Function to print usage instructions
 print_usage() {
     cat << EOF
-CrystaLyse.AI Installation Script
+Crystalyse Installation Script
 
 Usage: $0 [OPTIONS]
 
@@ -272,7 +272,7 @@ done
 
 # Main installation process
 main() {
-    print_info "Starting CrystaLyse.AI installation..."
+    print_info "Starting Crystalyse installation..."
     
     # Find or install Python
     if [[ -n "$PYTHON_CMD" ]]; then
@@ -306,7 +306,7 @@ main() {
         print_info "Skipping virtual environment creation"
     fi
     
-    # Install CrystaLyse.AI
+    # Install Crystalyse
     install_crystalyse "$INSTALL_METHOD" "$EXTRAS"
     
     # Verify installation

@@ -1,6 +1,6 @@
 
 """
-CrystaLyse.AI v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design
+Crystalyse v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design
 """
 
 import asyncio
@@ -40,7 +40,7 @@ from crystalyse.ui.enhanced_clarification import IntegratedClarificationSystem
 # --- Setup ---
 app = typer.Typer(
     name="crystalyse",
-    help="CrystaLyse.AI v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design",
+    help="Crystalyse v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design",
     add_completion=False,
     no_args_is_help=True,
     rich_markup_mode="rich",
@@ -247,6 +247,17 @@ def discover(
         "--hide-summary",
         help="Hide provenance summary table (data still captured)"
     ),
+    mode: Optional[AgentMode] = typer.Option(
+        None,
+        "--mode",
+        help="Agent operating mode (overrides global option)."
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Project name for workspace (overrides global option)."
+    ),
 ):
     """
     Run a single, non-interactive discovery query with automatic provenance capture.
@@ -258,9 +269,14 @@ def discover(
         crystalyse discover "Find stable perovskites"
         crystalyse discover "Predict Li-ion cathodes" --provenance-dir ./my_research
         crystalyse discover "Quick test" --hide-summary
+        crystalyse discover "Analysis" --mode rigorous
     """
+    # Determine effective mode and project (local overrides global)
+    effective_mode = mode if mode is not None else state['mode']
+    effective_project = project if project is not None else state['project']
+
     console.print(f"[cyan]Starting non-interactive discovery:[/cyan] {query}")
-    console.print(f"[dim]Mode: {state['mode']} | Project: {state['project']}[/dim]\n")
+    console.print(f"[dim]Mode: {effective_mode.value} | Project: {effective_project}[/dim]\n")
 
     # Set up non-interactive handlers
     state["query"] = query
@@ -275,8 +291,8 @@ def discover(
 
         agent = EnhancedCrystaLyseAgent(
             config=config,
-            project_name=state['project'],
-            mode=state['mode'].value,
+            project_name=effective_project,
+            mode=effective_mode.value,
             model=state['model'],
         )
 
@@ -510,11 +526,11 @@ def main_callback(
     project: str = typer.Option("crystalyse_session", "-p", "--project", help="Project name for workspace."),
     mode: AgentMode = typer.Option(AgentMode.adaptive, "--mode", help="Agent operating mode.", case_sensitive=False),
     model: Optional[str] = typer.Option(None, "--model", help="Language model to use."),
-    version: Optional[bool] = typer.Option(None, "--version", help="Show version and exit.", callback=lambda v: (console.print("CrystaLyse.AI v1.0.0-dev"), exit(0)) if v else None, is_eager=True),
+    version: Optional[bool] = typer.Option(None, "--version", help="Show version and exit.", callback=lambda v: (console.print("Crystalyse v1.0.0-dev"), exit(0)) if v else None, is_eager=True),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
 ):
     """
-    CrystaLyse.AI v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design
+    Crystalyse v1.0.0-dev - Intelligent Scientific AI Agent for Inorganic Materials Design
     """
     state["project"] = project
     state["mode"] = mode
@@ -542,14 +558,11 @@ def run():
     # If no arguments or no command specified, insert 'chat' as default command
     if len(sys.argv) == 1:
         sys.argv.append('chat')
-    elif len(sys.argv) > 1 and sys.argv[1].startswith('-') and sys.argv[1] not in ['--help', '-h']:
-        # If first arg is an option (not help), insert 'chat' command before options
-        sys.argv.insert(1, 'chat')
 
     try:
         app()
     except KeyboardInterrupt:
-        console.print(f"\n[cyan]CrystaLyse.AI session ended.[/cyan]")
+        console.print(f"\n[cyan]Crystalyse session ended.[/cyan]")
     except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
         console.print(f"\n[red]❌ An unexpected error occurred: {e}[/red]")

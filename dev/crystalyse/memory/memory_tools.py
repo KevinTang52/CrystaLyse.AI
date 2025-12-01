@@ -1,5 +1,5 @@
 """
-Memory Tools for CrystaLyse.AI Agent
+Memory Tools for Crystalyse Agent
 
 Function tools for OpenAI Agents SDK to interact with the simple memory system.
 Provides save_to_memory, search_memory, and discovery caching capabilities.

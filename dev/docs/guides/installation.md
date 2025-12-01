@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides comprehensive instructions for installing CrystaLyse.AI on various platforms. CrystaLyse.AI requires Python 3.11 or higher and includes installation of all necessary chemistry tools and MCP servers.
+This guide provides comprehensive instructions for installing Crystalyse on various platforms. Crystalyse requires Python 3.11 or higher and includes installation of all necessary chemistry tools and MCP servers.
 
 ## System Requirements
 
@@ -32,8 +32,8 @@ This guide provides comprehensive instructions for installing CrystaLyse.AI on v
 Clone and install from the repository:
 ```bash
 # Clone repository
-git clone https://github.com/ryannduma/CrystaLyse.AI.git
-cd CrystaLyse.AI
+git clone https://github.com/ryannduma/Crystalyse.git
+cd Crystalyse
 
 # Create conda environment (recommended)
 conda create -n crystalyse python=3.11
@@ -148,10 +148,10 @@ source crystalyse-env/bin/activate
 pip install --upgrade pip
 ```
 
-#### 3. Install CrystaLyse.AI
+#### 3. Install Crystalyse
 
 ```bash
-pip install crystalyse-ai
+pip install crystalyse
 ```
 
 ### macOS
@@ -178,8 +178,8 @@ python3.11 -m venv crystalyse-env
 # Activate environment
 source crystalyse-env/bin/activate
 
-# Install CrystaLyse.AI
-pip install crystalyse-ai
+# Install Crystalyse
+pip install crystalyse
 ```
 
 ### Windows
@@ -206,8 +206,8 @@ python -m venv crystalyse-env
 # Activate environment
 crystalyse-env\Scripts\activate
 
-# Install CrystaLyse.AI
-pip install crystalyse-ai
+# Install Crystalyse
+pip install crystalyse
 ```
 
 ## Automated Installation Script
@@ -223,7 +223,7 @@ The script automatically:
 - Detects your operating system
 - Checks Python version
 - Creates virtual environment
-- Installs CrystaLyse.AI and dependencies
+- Installs Crystalyse and dependencies
 - Configures initial settings
 
 ## Verification
@@ -246,7 +246,7 @@ Expected output for working installation:
 $ crystalyse --help
 Usage: crystalyse [OPTIONS] COMMAND [ARGS]...
 
-  CrystaLyse.AI - Computational Materials Design Platform
+  Crystalyse - Computational Materials Design Platform
 
 Commands:
   analyse   Run one-shot materials analysis
@@ -261,7 +261,7 @@ Commands:
 
 ### API Key Configuration
 
-CrystaLyse.AI requires an OpenAI API key:
+Crystalyse requires an OpenAI API key:
 
 ```bash
 # Set environment variable (recommended)
@@ -331,7 +331,7 @@ ui:
 
 ### Core Dependencies
 
-CrystaLyse.AI automatically installs:
+Crystalyse automatically installs:
 
 - **openai**: OpenAI API client
 - **rdkit**: Chemistry toolkit
@@ -347,14 +347,9 @@ CrystaLyse.AI automatically installs:
 Install additional features:
 
 ```bash
-# Quantum chemistry tools
-pip install "crystalyse-ai[quantum]"
-
-# Advanced visualisation
-pip install "crystalyse-ai[viz]"
 
 # All extras
-pip install "crystalyse-ai[all]"
+pip install "crystalyse[all]"
 ```
 
 ### MCP Server Dependencies
@@ -412,7 +407,7 @@ crystalyse config show
 #### 1. Python Version Error
 
 ```
-Error: CrystaLyse.AI requires Python 3.11 or higher
+Error: Crystalyse requires Python 3.11 or higher
 ```
 
 **Solution:**
@@ -550,7 +545,7 @@ crystalyse stats
 
 ```bash
 # Update to latest version
-pip install --upgrade crystalyse-ai
+pip install --upgrade crystalyse
 
 # Check for updates
 crystalyse check-updates
@@ -560,7 +555,7 @@ crystalyse check-updates
 
 ```bash
 # Update development installation
-cd crystalyse-ai
+cd crystalyse
 git pull origin main
 pip install -e ".[dev]"
 ```
@@ -571,7 +566,7 @@ pip install -e ".[dev]"
 
 ```bash
 # Uninstall package
-pip uninstall crystalyse-ai
+pip uninstall crystalyse
 
 # Remove configuration (optional)
 rm -rf ~/.crystalyse

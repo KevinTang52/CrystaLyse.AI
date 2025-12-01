@@ -1,5 +1,5 @@
 """
-User Preference Memory for CrystaLyse.AI
+User Preference Memory for Crystalyse
 
 Implements cross-session learning to personalize the clarification and mode selection
 experience based on user interaction patterns and preferences.

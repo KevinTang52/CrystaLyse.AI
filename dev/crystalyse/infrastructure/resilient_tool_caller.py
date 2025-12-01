@@ -1,5 +1,5 @@
 """
-Resilient Tool Caller for CrystaLyse.AI
+Resilient Tool Caller for Crystalyse
 Provides retry logic and error handling for MCP tool calls.
 """
 import asyncio

@@ -1,7 +1,7 @@
 [project]
 name = "visualization-mcp"
 version = "0.1.0"
-description = "Visualization MCP Server for CrystaLyse.AI"
+description = "Visualization MCP Server for Crystalyse"
 dependencies = [
     # Core package with tool implementations
     "crystalyse",

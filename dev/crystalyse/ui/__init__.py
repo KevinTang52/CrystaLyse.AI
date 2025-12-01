@@ -1,5 +1,5 @@
 """
-CrystaLyse.AI UI Components
+Crystalyse UI Components
 """
 
 # This file can be expanded with UI component exports as needed

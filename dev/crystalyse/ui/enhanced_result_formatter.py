@@ -1,5 +1,5 @@
 """
-Enhanced Result Formatter for CrystaLyse.AI
+Enhanced Result Formatter for Crystalyse
 
 Provides beautiful, readable formatting for JSON outputs and tool results,
 making complex scientific data easily digestible for users.

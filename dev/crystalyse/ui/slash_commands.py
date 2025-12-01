@@ -1,5 +1,5 @@
 """
-Slash commands for CrystaLyse.AI CLI.
+Slash commands for Crystalyse CLI.
 Meta-operations and system commands for enhanced user experience.
 """
 import time
@@ -14,7 +14,7 @@ from crystalyse.config import Config
 
 class SlashCommandHandler:
     """
-    Handles slash commands for meta-operations in CrystaLyse.AI.
+    Handles slash commands for meta-operations in Crystalyse.
     """
     
     def __init__(self, console: Console, config: Optional[Config] = None, chat_experience=None):
@@ -77,11 +77,11 @@ class SlashCommandHandler:
         help_table.add_row("/model [show|o3|o4-mini|o3-mini]", "View or change language model")
         help_table.add_row("/about", "Show version and system information")
         help_table.add_row("/clear", "Clear the terminal screen")
-        help_table.add_row("/quit, /exit", "Exit CrystaLyse.AI session")
+        help_table.add_row("/quit, /exit", "Exit Crystalyse session")
         
         self.console.print(Panel(
             help_table,
-            title="[bold]CrystaLyse.AI Commands[/bold]",
+            title="[bold]Crystalyse Commands[/bold]",
             border_style="cyan"
         ))
         
@@ -217,7 +217,7 @@ class SlashCommandHandler:
         
         self.console.print(Panel(
             stats_table,
-            title="[bold]CrystaLyse.AI Session Statistics[/bold]",
+            title="[bold]Crystalyse Session Statistics[/bold]",
             border_style="green"
         ))
         
@@ -293,7 +293,7 @@ class SlashCommandHandler:
     def _about(self, _args: List[str]):
         """Show version and system information."""
         about_text = Text()
-        about_text.append("CrystaLyse.AI 2.0\n", style="bold cyan")
+        about_text.append("Crystalyse 2.0\n", style="bold cyan")
         about_text.append("AI-Powered Materials Design Platform\n\n", style="cyan")
         about_text.append("Built with:\n", style="bold")
         about_text.append("• OpenAI Agents SDK\n", style="dim")
@@ -304,7 +304,7 @@ class SlashCommandHandler:
         
         self.console.print(Panel(
             about_text,
-            title="[bold]About CrystaLyse.AI[/bold]",
+            title="[bold]About Crystalyse[/bold]",
             border_style="cyan"
         ))
         
@@ -406,7 +406,7 @@ class SlashCommandHandler:
 
     def _quit(self, _args: List[str]):
         """Exit the application."""
-        self.console.print("[cyan]Thank you for using CrystaLyse.AI! Goodbye.[/cyan]")
+        self.console.print("[cyan]Thank you for using Crystalyse! Goodbye.[/cyan]")
         exit(0)
         
     def list_commands(self) -> List[str]:

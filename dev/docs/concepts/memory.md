@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI implements sophisticated memory systems that enable agents to maintain context, learn from interactions, and build upon previous discoveries. The memory architecture is designed specifically for materials design research workflows.
+Crystalyse implements sophisticated memory systems that enable agents to maintain context, learn from interactions, and build upon previous discoveries. The memory architecture is designed specifically for materials design research workflows.
 
 ## Memory Architecture
 
@@ -86,7 +86,7 @@ Personalised memory for each user:
 
 ### Storage Backends
 
-CrystaLyse.AI supports multiple storage options:
+Crystalyse supports multiple storage options:
 
 ```python
 # In-memory storage (default)

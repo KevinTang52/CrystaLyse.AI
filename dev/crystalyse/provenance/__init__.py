@@ -1,7 +1,7 @@
 """
 CrystaLyse Provenance System
 
-Complete provenance capture for materials discovery with CrystaLyse.AI
+Complete provenance capture for materials discovery with Crystalyse
 """
 
 from .core import JSONLLogger, Event, MaterialsTracker, Material, MCPDetector

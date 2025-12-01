@@ -1,4 +1,4 @@
-"""Creative mode specific output formatter for CrystaLyse.AI"""
+"""Creative mode specific output formatter for Crystalyse"""
 
 import json
 import re

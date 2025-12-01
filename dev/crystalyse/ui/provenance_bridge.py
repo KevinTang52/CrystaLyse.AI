@@ -1,5 +1,5 @@
 """
-Provenance Bridge for CrystaLyse.AI
+Provenance Bridge for Crystalyse
 
 Integrates the standalone provenance_system module with CrystaLyse's core architecture.
 This bridge extends ProvenanceTraceHandler with CrystaLyse-specific functionality whilst

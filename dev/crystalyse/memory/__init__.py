@@ -1,5 +1,5 @@
 """
-Simple File-Based Memory System for CrystaLyse.AI
+Simple File-Based Memory System for Crystalyse
 
 A gemini-cli inspired memory system that uses simple files + smart context
 instead of complex databases. Provides 4 layers:

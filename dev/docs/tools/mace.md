@@ -1,6 +1,6 @@
 # MACE - Machine Learning Force Fields
 
-MACE (Machine Learning ACE) is a state-of-the-art force field framework that provides fast and accurate energy calculations for crystal structures. It serves as the primary energy evaluation engine in both CrystaLyse.AI analysis modes.
+MACE (Machine Learning ACE) is a state-of-the-art force field framework that provides fast and accurate energy calculations for crystal structures. It serves as the primary energy evaluation engine in both Crystalyse analysis modes.
 
 ## Overview
 
@@ -8,7 +8,7 @@ MACE employs machine learning to predict formation energies, total energies, and
 
 **Key Advantage**: MACE provides DFT-level accuracy for energy calculations in seconds rather than hours, enabling rapid materials screening and optimisation.
 
-## Integration in CrystaLyse.AI
+## Integration in Crystalyse
 
 ### Availability by Mode
 - **Creative Mode**: ✅ Formation energy calculations
@@ -132,7 +132,7 @@ Confidence Level: HIGH (uncertainty < 0.1 eV/atom)
 
 ## Practical Usage
 
-### In CrystaLyse.AI Workflows
+### In Crystalyse Workflows
 
 #### Creative Mode Energy Ranking
 ```bash
@@ -534,7 +534,7 @@ Planned enhancements to MACE integration:
 
 ## Citation
 
-If you use MACE through CrystaLyse.AI, please cite the original MACE publications:
+If you use MACE through Crystalyse, please cite the original MACE publications:
 
 ```bibtex
 @inproceedings{Batatia2022mace,
@@ -563,7 +563,7 @@ If you use MACE through CrystaLyse.AI, please cite the original MACE publication
 
 ## Summary
 
-MACE provides the critical energy evaluation capability that enables CrystaLyse.AI to rank and assess the stability of predicted crystal structures. Its combination of speed and accuracy makes comprehensive materials screening feasible within the CrystaLyse.AI platform.
+MACE provides the critical energy evaluation capability that enables Crystalyse to rank and assess the stability of predicted crystal structures. Its combination of speed and accuracy makes comprehensive materials screening feasible within the Crystalyse platform.
 
 **Key Benefits**:
 - Near-DFT accuracy at dramatically reduced cost
@@ -572,6 +572,6 @@ MACE provides the critical energy evaluation capability that enables CrystaLyse.
 - Seamless integration with structure prediction pipeline
 - Support for diverse materials classes
 
-The integration of MACE with Chemeleon structure prediction provides a complete computational pipeline from composition to stability assessment, forming the foundation of CrystaLyse.AI's materials design capabilities.
+The integration of MACE with Chemeleon structure prediction provides a complete computational pipeline from composition to stability assessment, forming the foundation of Crystalyse's materials design capabilities.
 
 For detailed usage examples and integration patterns, see the [CLI Usage Guide](../guides/cli_usage.md) and [Analysis Modes Documentation](../concepts/analysis_modes.md).

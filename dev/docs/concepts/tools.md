@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI's tool system provides agents with access to specialised materials science software, databases, and computational resources. The modular architecture allows seamless integration of diverse materials design tools through standardised Model Context Protocol (MCP) interfaces.
+Crystalyse's tool system provides agents with access to specialised materials science software, databases, and computational resources. The modular architecture allows seamless integration of diverse materials design tools through standardised Model Context Protocol (MCP) interfaces.
 
 ## Tool Architecture
 
@@ -150,7 +150,7 @@ Integrated pipeline using all available tools:
 
 ```python
 # Example complete materials design workflow
-# Available through CrystaLyse.AI agent interface
+# Available through Crystalyse agent interface
 
 # Rigorous mode (complete validation):
 # 1. SMACT composition validation
@@ -171,10 +171,10 @@ result = await agent.analyse(query, mode="creative")
 
 ### MCP Server Architecture
 
-CrystaLyse.AI uses multiple MCP servers for tool access:
+Crystalyse uses multiple MCP servers for tool access:
 
 ```python
-# Server configuration in CrystaLyse.AI
+# Server configuration in Crystalyse
 servers = {
     "chemistry-creative-server": {
         "tools": ["chemeleon", "mace", "basic_visualisation"],
@@ -347,7 +347,7 @@ unified_server_config = {
 ### Sequential Tool Execution
 
 ```python
-# CrystaLyse.AI handles workflow automatically
+# Crystalyse handles workflow automatically
 # Rigorous mode workflow:
 rigorous_workflow = [
     "SMACT composition validation",
@@ -370,7 +370,7 @@ results = await agent.analyse("Analyse LiFePO4 for battery applications", mode="
 ### Parallel Tool Execution
 
 ```python
-# CrystaLyse.AI automatically parallelises where possible
+# Crystalyse automatically parallelises where possible
 # Creative mode: Chemeleon + MACE run in parallel for multiple structures
 # Unified mode: Full pipeline with optimised tool orchestration
 # Visualisation: 3D rendering + analysis plots generated concurrently
@@ -383,7 +383,7 @@ results = await agent.analyse("Compare olivine vs spinel structures for LiFePO4"
 ### Conditional Tool Selection
 
 ```python
-# CrystaLyse.AI automatically selects appropriate tools based on:
+# Crystalyse automatically selects appropriate tools based on:
 # 1. Analysis mode (creative vs rigorous)
 # 2. Query requirements (structure, energy, validation)
 # 3. Material complexity (number of elements, structure type)
@@ -413,7 +413,7 @@ tool_manager = ToolManager(
 )
 
 # Fallback configuration
-# CrystaLyse.AI built-in resilience
+# Crystalyse built-in resilience
 fallbacks = {
     "chemistry_unified_server": ["chemistry_creative_server", "individual_tools"],
     "chemistry_creative_server": ["individual_oldmcpservers"],
@@ -468,7 +468,7 @@ print(f"Cache hit rate: {cache_stats.hit_rate}%")
 
 ```python
 # Configure rate limits
-# CrystaLyse.AI MCP server rate limits
+# Crystalyse MCP server rate limits
 rate_limits = {
     "chemistry_unified_server": {"requests_per_minute": 10},
     "chemistry_creative_server": {"requests_per_minute": 20},
@@ -488,7 +488,7 @@ tool_manager.configure_rate_limits(rate_limits)
 ### Async Execution
 
 ```python
-# CrystaLyse.AI handles async execution internally
+# Crystalyse handles async execution internally
 # Agent automatically manages:
 # - Concurrent MCP server connections
 # - Parallel structure generation and energy calculations
@@ -516,7 +516,7 @@ result = await agent.analyse(
 ### 2. Data Flow
 
 ```python
-# CrystaLyse.AI optimised data flow
+# Crystalyse optimised data flow
 # Tools communicate through standardised CIF format:
 # SMACT (composition) -> Chemeleon (structure/CIF) -> MACE (energy) -> Visualisation
 
@@ -541,7 +541,7 @@ result = await agent.analyse(material_query)
 
 ```python
 # Secure tool configuration
-# CrystaLyse.AI security configuration
+# Crystalyse security configuration
 tool_config = {
     "mcp_servers": {
         "chemistry_unified_server": {

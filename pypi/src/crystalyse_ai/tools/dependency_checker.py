@@ -1,4 +1,4 @@
-"""Dependency checker for CrystaLyse.AI - verifies and installs required components."""
+"""Dependency checker for Crystalyse - verifies and installs required components."""
 
 import importlib
 import json
@@ -19,7 +19,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 logger = logging.getLogger(__name__)
 
 class DependencyChecker:
-    """Comprehensive dependency checker for CrystaLyse.AI."""
+    """Comprehensive dependency checker for Crystalyse."""
     
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
@@ -419,7 +419,7 @@ class DependencyChecker:
         
         self.console.print(Panel(
             status_text,
-            title="[bold]CrystaLyse.AI Dependency Status[/bold]",
+            title="[bold]Crystalyse Dependency Status[/bold]",
             border_style="green" if overall_status == "ready" else "yellow"
         ))
         
@@ -496,7 +496,7 @@ class DependencyChecker:
 
 def check_dependencies(install_missing: bool = False, verbose: bool = False, show_details: bool = False) -> Dict[str, Any]:
     """
-    Check all CrystaLyse.AI dependencies and optionally install missing components.
+    Check all Crystalyse dependencies and optionally install missing components.
     
     Args:
         install_missing: If True, attempt to install missing components
@@ -511,7 +511,7 @@ def check_dependencies(install_missing: bool = False, verbose: bool = False, sho
     # Enhanced header
     console.print(Panel(
         Text.assemble(
-            ("🔍 CrystaLyse.AI Dependency Checker\n\n", "bold cyan"),
+            ("🔍 Crystalyse Dependency Checker\n\n", "bold cyan"),
             ("Verifying installation and downloading required components...", "dim")
         ),
         border_style="cyan"
@@ -525,7 +525,7 @@ def check_dependencies(install_missing: bool = False, verbose: bool = False, sho
     
     # Summary message
     if results["overall"]["status"] == "ready":
-        console.print("\n[bold green]🎉 CrystaLyse.AI is ready to use![/bold green]")
+        console.print("\n[bold green]🎉 Crystalyse is ready to use![/bold green]")
         console.print("[dim]You can now run 'crystalyse chat' or 'crystalyse analyse' commands.[/dim]")
     else:
         console.print("\n[bold yellow]⚠️ Some issues were found.[/bold yellow]")

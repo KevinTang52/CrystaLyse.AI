@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unified CLI Interface for CrystaLyse.AI
+Unified CLI Interface for Crystalyse
 
 This provides a single, clean entry point similar to Gemini and Claude Code,
 with a text input box and in-session mode switching.
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 class UnifiedCrystaLyseInterface:
-    """Unified interface for CrystaLyse.AI with single entry point."""
+    """Unified interface for Crystalyse with single entry point."""
     
     def __init__(self):
         # Initialize enhanced UI with red theme

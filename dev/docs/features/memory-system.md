@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI v1.2 implements a sophisticated 4-layer memory system using a "simple files + smart context" philosophy. This replaces complex database architectures with efficient file-based storage.
+Crystalyse v1.2 implements a sophisticated 4-layer memory system using a "simple files + smart context" philosophy. This replaces complex database architectures with efficient file-based storage.
 
 ## Architecture
 

@@ -1,4 +1,4 @@
-# CLI Reference - CrystaLyse.AI v1.0.0
+# CLI Reference - Crystalyse v1.0.0
 
 ## Command Overview
 
@@ -26,6 +26,12 @@ crystalyse discover [QUERY] [OPTIONS]
 
 **Arguments:**
 - `QUERY`: Natural language materials query (required)
+
+**Options:**
+- `--mode`: Agent operating mode (overrides global option)
+- `--project, -p`: Project name (overrides global option)
+- `--provenance-dir`: Custom directory for provenance output
+- `--hide-summary`: Hide provenance summary table
 
 **Examples:**
 ```bash
@@ -68,97 +74,22 @@ crystalyse user-stats [OPTIONS]
 **Example:**
 ```bash
 crystalyse user-stats --user alice
-crystalyse analyse "High-entropy alloys" --mode rigorous --timeout 600
-```
-
-### `chat`
-Start interactive research session.
+### `analyse-provenance`
+Analyse provenance data from previous discovery sessions.
 
 ```bash
-crystalyse chat [OPTIONS]
+crystalyse analyse-provenance [OPTIONS]
 ```
 
 **Options:**
-- `--user, -u`: User ID (required for session management)
-- `--session, -s`: Session ID (creates new if doesn't exist)
-- `--mode, -m`: Analysis mode (creative, rigorous, adaptive)
-- `--model`: Model to use (default: gpt-4o)
+- `--latest`: Analyse the most recent session
+- `--dir`: Provenance directory to search (default: ./provenance_output)
+- `--session`: Specific session ID to analyse
 
 **Examples:**
 ```bash
-crystalyse chat -u researcher1 -s battery_project
-crystalyse chat -u alice -s solar_cells -m rigorous
-crystalyse chat -u bob --session catalyst_design --mode creative
-```
-
-### `resume`
-Resume existing session.
-
-```bash
-crystalyse resume [SESSION_ID] [OPTIONS]
-```
-
-**Arguments:**
-- `SESSION_ID`: Session to resume (required)
-
-**Options:**  
-- `--user, -u`: User ID (required)
-
-**Examples:**
-```bash
-crystalyse resume battery_project -u researcher1
-crystalyse resume my_session --user alice
-```
-
-### `sessions`  
-List user sessions.
-
-```bash
-crystalyse sessions [OPTIONS]
-```
-
-**Options:**
-- `--user, -u`: User ID (required)
-- `--verbose, -v`: Show detailed session information
-
-**Examples:**
-```bash
-crystalyse sessions -u researcher1
-crystalyse sessions --user alice --verbose
-```
-
-### `demo`
-Run demonstration session.
-
-```bash
-crystalyse demo [OPTIONS]
-```
-
-**Options:**
-- `--mode, -m`: Analysis mode (default: rigorous)
-- `--quick`: Run abbreviated demo
-
-**Examples:**
-```bash
-crystalyse demo
-crystalyse demo --mode creative --quick
-```
-
-### `status`
-Check system health.
-
-```bash
-crystalyse status [OPTIONS]
-```
-
-**Options:**
-- `--verbose, -v`: Detailed health information
-- `--servers`: Check MCP server status
-
-**Examples:**
-```bash
-crystalyse status
-crystalyse status --verbose --servers
+crystalyse analyse-provenance --latest
+crystalyse analyse-provenance --session crystalyse_creative_20250910_120000
 ```
 
 ## In-Session Commands

@@ -1,5 +1,5 @@
 """
-UI Components for CrystaLyse.AI
+UI Components for Crystalyse
 
 Provides sophisticated UI components with theming and gradient support.
 """
@@ -156,7 +156,7 @@ class ChatDisplay:
         return Panel(
             content,
             border_style=self.theme.colors.accent_green,
-            title="[bold]CrystaLyse.AI[/bold]",
+            title="[bold]Crystalyse[/bold]",
             title_align="left",
             box=SIMPLE,
             padding=(0, 1)

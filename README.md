@@ -164,7 +164,9 @@ Memory system provides four layers:
 The agent implements three-tier safety filtering:
 
 **Tier 1** (Automatic refusal) - Explosive materials, toxic heavy metals, chemical weapon precursors
+
 **Tier 2** (Context review) - Ambiguous requests requiring additional clarification
+
 **Tier 3** (Safe execution) - Legitimate safety applications (fire-resistant ceramics, biocompatible implants)
 
 Sustainability awareness includes earth-abundant element prioritisation (Fe, Al, Si over rare earths) and critical element flagging (Co, In, Ga dependencies).
@@ -249,7 +251,7 @@ Crystalyse builds on open-source tools from the materials science community:
 - **MACE** - Foundation models for atomistic materials chemistry
 - **PyMatGen** - Robust, open-source Python library for materials analysis
 - **Pymatviz** - A toolkit for visualisations in materials informatics.
-- **3Dmol.js** - A capabble visualisation package for 3D Chemical Structures.
+- **3Dmol.js** - A capable visualisation package for 3D Chemical Structures.
 - **OpenAI Agents SDK** - Agent orchestration framework
 
 This work was supported by EPSRC project EP/X037754/1 and the AIchemy hub (grants EP/Y028775/1, EP/Y028759/1).

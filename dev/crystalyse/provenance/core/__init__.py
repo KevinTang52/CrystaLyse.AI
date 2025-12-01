@@ -1,5 +1,5 @@
 """
-Core provenance components for CrystaLyse.AI
+Core provenance components for Crystalyse
 """
 
 from .event_logger import JSONLLogger, Event

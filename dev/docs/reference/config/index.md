@@ -1,10 +1,10 @@
 # Configuration Reference
 
-Complete reference for CrystaLyse.AI configuration options, environment variables, and system settings.
+Complete reference for Crystalyse configuration options, environment variables, and system settings.
 
 ## Overview
 
-CrystaLyse.AI can be configured through multiple mechanisms:
+Crystalyse can be configured through multiple mechanisms:
 
 - **Environment Variables**: Runtime configuration and API keys
 - **Configuration Files**: Persistent settings and preferences
@@ -162,7 +162,7 @@ See [Installation Guide - Chemeleon Model Checkpoints](../guides/installation.md
 
 ### Default Configuration Location
 
-CrystaLyse.AI looks for configuration in:
+Crystalyse looks for configuration in:
 1. `./crystalyse.yaml` (current directory)
 2. `~/.crystalyse/config.yaml` (user directory)
 3. `/etc/crystalyse/config.yaml` (system-wide)
@@ -297,7 +297,7 @@ crystalyse config show
 
 Expected output:
 ```
-   CrystaLyse.AI Runtime   
+   Crystalyse Runtime   
        Configuration       
 ┏━━━━━━━━━━━━━━━┳━━━━━━━━━┓
 ┃ Setting       ┃ Value   ┃

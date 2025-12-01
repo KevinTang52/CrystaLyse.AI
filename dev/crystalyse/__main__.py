@@ -1,5 +1,5 @@
 """
-CrystaLyse.AI command-line interface entry point.
+Crystalyse command-line interface entry point.
 """
 
 from .cli import main

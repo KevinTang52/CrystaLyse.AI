@@ -1,8 +1,8 @@
-# CrystaLyse.AI Session-Based User Guide
+# Crystalyse Session-Based User Guide
 
 ## Overview
 
-CrystaLyse.AI now features a revolutionary session-based conversation system that provides SQLiteSession-like behavior for materials research. This guide demonstrates how these new features dramatically enhance complex research workflows.
+Crystalyse now features a revolutionary session-based conversation system that provides SQLiteSession-like behavior for materials research. This guide demonstrates how these new features dramatically enhance complex research workflows.
 
 ## 🌟 Key Features
 
