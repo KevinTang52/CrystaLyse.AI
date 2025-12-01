@@ -1,6 +1,6 @@
 
 """
-Integrated Clarification System for CrystaLyse.AI
+Integrated Clarification System for Crystalyse
 
 Combines query analysis, expertise detection, and adaptive clarification 
 into a unified, intelligent interface. This system transforms clarification 

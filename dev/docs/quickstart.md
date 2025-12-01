@@ -1,6 +1,6 @@
 # Quickstart
 
-Get up and running with CrystaLyse.AI in minutes. This guide covers installation, configuration, and your first materials analysis.
+Get up and running with Crystalyse in minutes. This guide covers installation, configuration, and your first materials analysis.
 
 ## Installation
 
@@ -16,8 +16,8 @@ Get up and running with CrystaLyse.AI in minutes. This guide covers installation
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/ryannduma/CrystaLyse.AI.git
-   cd CrystaLyse.AI
+   git clone https://github.com/ryannduma/Crystalyse.git
+   cd Crystalyse
    ```
 
 2. **Create environment:**
@@ -26,7 +26,7 @@ Get up and running with CrystaLyse.AI in minutes. This guide covers installation
    conda activate crystalyse
    ```
 
-3. **Install CrystaLyse.AI:**
+3. **Install Crystalyse:**
    ```bash
    # Step 1: Install core package FIRST (required)
    pip install -e .
@@ -42,7 +42,7 @@ Get up and running with CrystaLyse.AI in minutes. This guide covers installation
    crystalyse --help
    ```
 
-**Note on First Run**: On first execution, CrystaLyse.AI will auto-download ~600MB of Chemeleon model checkpoints to `~/.cache/crystalyse/chemeleon_checkpoints/`. This one-time download takes 2-5 minutes depending on connection speed and includes a progress bar.
+**Note on First Run**: On first execution, Crystalyse will auto-download ~600MB of Chemeleon model checkpoints to `~/.cache/crystalyse/chemeleon_checkpoints/`. This one-time download takes 2-5 minutes depending on connection speed and includes a progress bar.
 
 ## Configuration
 
@@ -68,13 +68,13 @@ This should display your configuration including available MCP servers.
 Analyse a perovskite material for solar cells:
 
 ```bash
-crystalyse analyse "Find a perovskite material for solar cells" --mode creative
+crystalyse discover "Find a perovskite material for solar cells" --mode creative
 ```
 
 Expected output:
 ```
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│                 CrystaLyse.AI - Materials Discovery Platform                 │
+│                 Crystalyse - Materials Discovery Platform                 │
 │                 v1.0.0 - AI-Powered Materials Discovery                      │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
@@ -106,10 +106,10 @@ crystalyse chat -u researcher -s solar_project -m creative
 In the session:
 ```
 🔬 You: Find lead-free perovskites for photovoltaics
-🤖 CrystaLyse: I'll explore lead-free perovskite alternatives...
+🤖 Crystalyse: I'll explore lead-free perovskite alternatives...
 
 🔬 You: What about tin-based alternatives?
-🤖 CrystaLyse: Excellent question! Based on the previous analysis...
+🤖 Crystalyse: Excellent question! Based on the previous analysis...
 ```
 
 Session commands:
@@ -123,7 +123,7 @@ Session commands:
 ### Creative Mode (Fast Exploration)
 
 ```bash
-crystalyse analyse "Design high-capacity battery materials" --mode creative
+crystalyse discover "Design high-capacity battery materials" --mode creative
 ```
 
 - **Tools Used**: Chemeleon + MACE
@@ -133,7 +133,7 @@ crystalyse analyse "Design high-capacity battery materials" --mode creative
 ### Rigorous Mode (Complete Validation)
 
 ```bash
-crystalyse analyse "Find stable electrolyte materials" --mode rigorous
+crystalyse discover "Find stable electrolyte materials" --mode rigorous
 ```
 
 - **Tools Used**: SMACT + Chemeleon + MACE + Analysis Suite
@@ -146,16 +146,10 @@ crystalyse analyse "Find stable electrolyte materials" --mode rigorous
 
 ```bash
 # One-shot analysis
-crystalyse analyse "your query" --mode [creative|rigorous]
+crystalyse discover "your query" --mode [creative|rigorous]
 
 # Interactive chat
 crystalyse chat -u username -s session_name -m [creative|rigorous]
-
-# Resume previous session
-crystalyse resume session_name -u username
-
-# List all sessions
-crystalyse sessions -u username
 
 # Run demonstration
 crystalyse demo
@@ -195,7 +189,7 @@ Available in-session commands:
 
 ### Visualisation Files
 
-CrystaLyse.AI automatically creates visualisation files in your current directory:
+Crystalyse automatically creates visualisation files in your current directory:
 
 ```bash
 # 3D structure viewers
@@ -213,12 +207,6 @@ CsGeI3_analysis/
 ### Session Management
 
 ```bash
-# List your sessions
-crystalyse sessions -u researcher
-
-# Resume previous work
-crystalyse resume solar_project -u researcher
-
 # Continue multi-day projects with full context
 ```
 
@@ -243,10 +231,10 @@ crystalyse chat -u battery_researcher -s lithium_study -m rigorous
 
 ```bash
 # Quick perovskite screening
-crystalyse analyse "Screen perovskites with band gaps 1.2-1.6 eV" --mode creative
+crystalyse discover "Screen perovskites with band gaps 1.2-1.6 eV" --mode creative
 
 # Detailed analysis of promising candidates
-crystalyse analyse "Analyse CsSnI3 for photovoltaic applications" --mode rigorous
+crystalyse discover "Analyse CsSnI3 for photovoltaic applications" --mode rigorous
 ```
 
 ## Troubleshooting
@@ -285,11 +273,11 @@ crystalyse analyse "Analyse CsSnI3 for photovoltaic applications" --mode rigorou
 - **Documentation**: Browse the complete [CLI Guide](guides/cli_usage.md)
 - **Tool Issues**: Check individual tool documentation under [Tools](tools/)
 - **Verbose Output**: Add `--verbose` to any command for detailed logging
-- **Demo Mode**: Run `crystalyse demo` to test the complete pipeline
+
 
 ## Next Steps
 
-Now that you have CrystaLyse.AI running:
+Now that you have Crystalyse running:
 
 1. **Learn the Tools**: Explore [SMACT](tools/smact.md), [Chemeleon](tools/chemeleon.md), and [MACE](tools/mace.md) capabilities
 2. **Understand Modes**: Read about [Analysis Modes](concepts/analysis_modes.md) and when to use each

@@ -1,10 +1,10 @@
 # API Reference
 
-Complete reference documentation for CrystaLyse.AI's interfaces, commands, and configuration options.
+Complete reference documentation for Crystalyse's interfaces, commands, and configuration options.
 
 ## Overview
 
-CrystaLyse.AI provides multiple interfaces for materials design and analysis:
+Crystalyse provides multiple interfaces for materials design and analysis:
 
 - **Command Line Interface (CLI)**: Primary interface for interactive and batch analysis
 - **Configuration System**: Flexible configuration for customising behaviour
@@ -101,7 +101,7 @@ crystalyse
 
 ### Analysis Results
 
-CrystaLyse.AI returns structured results in multiple formats:
+Crystalyse returns structured results in multiple formats:
 
 #### Creative Mode Output
 ```
@@ -208,7 +208,7 @@ crystalyse sessions -u battery_study
 
 ## Version Information
 
-This documentation covers CrystaLyse.AI v1.0.0 (Research Preview).
+This documentation covers Crystalyse v1.0.0 (Research Preview).
 
 For specific version requirements and compatibility:
 - Python 3.11+

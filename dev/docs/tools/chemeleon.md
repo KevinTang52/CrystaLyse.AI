@@ -1,6 +1,6 @@
 # Chemeleon - Crystal Structure Prediction
 
-Chemeleon is a state-of-the-art crystal structure prediction (CSP) tool that generates high-quality crystal structures from chemical compositions. It serves as the core structure generation engine in both CrystaLyse.AI analysis modes.
+Chemeleon is a state-of-the-art crystal structure prediction (CSP) tool that generates high-quality crystal structures from chemical compositions. It serves as the core structure generation engine in both Crystalyse analysis modes.
 
 ## Overview
 
@@ -8,7 +8,7 @@ Chemeleon combines machine learning with crystallographic principles to predict 
 
 **Key Strength**: Chemeleon excels at generating physically realistic crystal structures that respect chemical bonding principles and crystallographic constraints.
 
-## Integration in CrystaLyse.AI
+## Integration in Crystalyse
 
 ### Availability by Mode
 - **Creative Mode**: ✅ Core structure prediction
@@ -129,7 +129,7 @@ a ≈ 2 × (r_A + r_X) = 2 × (1.67 + 2.20) = 7.74 Å
 
 ## Practical Usage
 
-### In CrystaLyse.AI Workflows
+### In Crystalyse Workflows
 
 #### Creative Mode Structure Generation
 ```bash
@@ -471,7 +471,7 @@ Planned enhancements to Chemeleon integration:
 
 ## Citation
 
-If you use Chemeleon through CrystaLyse.AI, please cite the original publication:
+If you use Chemeleon through Crystalyse, please cite the original publication:
 
 ```bibtex
 @article{park2025exploration,
@@ -490,7 +490,7 @@ If you use Chemeleon through CrystaLyse.AI, please cite the original publication
 
 ## Summary
 
-Chemeleon provides the critical structure prediction capability that enables CrystaLyse.AI to generate realistic crystal structures from chemical compositions. Its integration in both analysis modes ensures that all materials analysis workflows begin with high-quality structural models.
+Chemeleon provides the critical structure prediction capability that enables Crystalyse to generate realistic crystal structures from chemical compositions. Its integration in both analysis modes ensures that all materials analysis workflows begin with high-quality structural models.
 
 **Key Benefits**:
 - High-quality crystal structure prediction
@@ -499,6 +499,6 @@ Chemeleon provides the critical structure prediction capability that enables Cry
 - Comprehensive structure validation
 - Support for diverse structure types
 
-The combination of Chemeleon's structure prediction with MACE's energy calculations provides the foundation for reliable computational materials design in CrystaLyse.AI.
+The combination of Chemeleon's structure prediction with MACE's energy calculations provides the foundation for reliable computational materials design in Crystalyse.
 
 For detailed usage examples and integration patterns, see the [CLI Usage Guide](../guides/cli_usage.md) and [Analysis Modes Documentation](../concepts/analysis_modes.md).

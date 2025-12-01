@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to CrystaLyse.AI will be documented in this file.
+All notable changes to Crystalyse will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-01-19
 
 ### Added
-- Initial release of CrystaLyse.AI
+- Initial release of Crystalyse
 - Complete computational materials design platform with AI agents
 - Session-based architecture for persistent materials discovery
 - Advanced memory systems for crystal structure and composition tracking

@@ -1,5 +1,5 @@
 """
-ASCII Art for CrystaLyse.AI
+ASCII Art for Crystalyse
 
 Provides responsive ASCII art logos with gradient support.
 """
@@ -79,7 +79,7 @@ def get_responsive_logo(terminal_width: int) -> str:
         return CRYSTALYSE_ULTRA_MINIMAL
     else:
         # For very small terminals, use text fallback
-        return "CrystaLyse.AI - Materials Design Platform"
+        return "Crystalyse - Intelligent Scientific Agent for Materials Design"
 
 
 def get_logo_with_subtitle(terminal_width: int, version: str = None) -> tuple[str, str]:

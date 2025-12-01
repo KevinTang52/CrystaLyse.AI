@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI operates in two distinct execution modes that determine how the agent processes queries and maintains state. Understanding these modes is crucial for choosing the right approach for your materials design workflow.
+Crystalyse operates in two distinct execution modes that determine how the agent processes queries and maintains state. Understanding these modes is crucial for choosing the right approach for your materials design workflow.
 
 ## Agent Modes
 

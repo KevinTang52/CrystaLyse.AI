@@ -1,7 +1,7 @@
 #!/bin/bash
 # Setup script for headless visualization
 
-echo "Setting up headless visualization environment for CrystaLyse.AI..."
+echo "Setting up headless visualization environment for Crystalyse..."
 
 # Check if running in headless environment
 if [ -z "$DISPLAY" ]; then

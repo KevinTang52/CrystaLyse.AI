@@ -1,6 +1,6 @@
 
 """
-Manages the interactive chat user experience for CrystaLyse.AI.
+Manages the interactive chat user experience for Crystalyse.
 """
 import json
 import logging
@@ -336,7 +336,7 @@ class ChatExperience:
             except Exception as e:
                 self._display_message("assistant", f"[bold red]An unexpected error occurred:[/bold red] {e}")
 
-        self.console.print("\n[bold cyan]Thank you for using CrystaLyse.AI! Goodbye.[/bold cyan]")
+        self.console.print("\n[bold cyan]Thank you for using Crystalyse! Goodbye.[/bold cyan]")
     
     async def _preprocess_query_with_clarification(self, raw_query: str) -> str:
         """

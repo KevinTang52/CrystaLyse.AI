@@ -1,12 +1,12 @@
-# CrystaLyse.AI Documentation
+# Crystalyse Documentation
 
-Welcome to CrystaLyse.AI - a computational materials design platform that accelerates materials exploration through AI-powered analysis and validation.
+Welcome to Crystalyse - a computational materials design platform that accelerates materials exploration through AI-powered analysis and validation.
 
 ## Overview
 
-CrystaLyse.AI is a computational materials design platform that combines large language models with rigorous computational chemistry tools. Built on the OpenAI Agents framework and integrated with advanced materials science tools via the Model Context Protocol (MCP), it provides researchers with a dual-mode system for exploring chemical space and analysing materials properties.
+Crystalyse is a computational materials design platform that combines large language models with rigorous computational chemistry tools. Built on the OpenAI Agents framework and integrated with advanced materials science tools via the Model Context Protocol (MCP), it provides researchers with a dual-mode system for exploring chemical space and analysing materials properties.
 
-**Key Features**: CrystaLyse.AI bridges the gap between AI creativity and scientific rigour, enabling researchers to go from materials concepts to validated computational analysis in under 2 minutes, significantly accelerating traditional design workflows.
+**Key Features**: Crystalyse bridges the gap between AI creativity and scientific rigour, enabling researchers to go from materials concepts to validated computational analysis in under 2 minutes, significantly accelerating traditional design workflows.
 
 ## Core Capabilities
 
@@ -30,7 +30,7 @@ CrystaLyse.AI is a computational materials design platform that combines large l
 ## Documentation Structure
 
 ### Getting Started
-- [Quickstart Guide](quickstart.md) - Get up and running with CrystaLyse.AI
+- [Quickstart Guide](quickstart.md) - Get up and running with Crystalyse
 - [Installation](guides/installation.md) - Detailed installation instructions
 - [CLI Usage Guide](guides/cli_usage.md) - Complete command-line interface reference
 
@@ -51,10 +51,10 @@ CrystaLyse.AI is a computational materials design platform that combines large l
 - [CLI Usage Guide](guides/cli_usage.md) - Master the command-line interface
 - [Session-Based Research](guides/session_based_usage.md) - Long-running design projects
 - [Batch Analysis](guides/batch_analysis.md) - High-throughput materials screening
-- [Integration Guide](guides/integration.md) - Using CrystaLyse.AI in your workflows
+- [Integration Guide](guides/integration.md) - Using Crystalyse in your workflows
 
 ### API Reference
-- [Python API](reference/api/) - Programmatic access to CrystaLyse.AI
+- [Python API](reference/api/) - Programmatic access to Crystalyse
 - [CLI Commands](reference/cli/) - Complete command reference
 - [Configuration](reference/config/) - Configuration options and settings
 - [Error Handling](reference/errors/) - Error codes and troubleshooting
@@ -113,7 +113,7 @@ CrystaLyse.AI is a computational materials design platform that combines large l
 
 ## Scientific Integrity
 
-CrystaLyse.AI maintains the highest standards of computational honesty:
+Crystalyse maintains the highest standards of computational honesty:
 
 - **100% Traceability**: Every numerical result traces to actual tool calls
 - **Zero Fabrication**: No estimated or fabricated energies, structures, or properties
@@ -144,7 +144,7 @@ CrystaLyse.AI maintains the highest standards of computational honesty:
 
 ## Next Steps
 
-1. Follow the [Quickstart Guide](quickstart.md) to begin using CrystaLyse.AI
+1. Follow the [Quickstart Guide](quickstart.md) to begin using Crystalyse
 2. Read the [CLI Usage Guide](guides/cli_usage.md) to master the interface
 3. Explore [Dual-Mode Concepts](concepts/dual_mode.md) to understand the discovery workflow
 4. Check the [Chemistry Tools](chemistry/smact.md) documentation for detailed capabilities
@@ -152,7 +152,7 @@ CrystaLyse.AI maintains the highest standards of computational honesty:
 
 ## Support and Community
 
-CrystaLyse.AI is actively developed and welcomes community engagement:
+Crystalyse is actively developed and welcomes community engagement:
 - **Issues**: Report bugs and request features on GitHub
 - **Documentation**: Comprehensive guides and API reference
 - **Examples**: Practical usage examples and tutorials
@@ -160,7 +160,7 @@ CrystaLyse.AI is actively developed and welcomes community engagement:
 
 ## Acknowledgments
 
-CrystaLyse.AI builds upon exceptional open-source tools:
+Crystalyse builds upon exceptional open-source tools:
 - **SMACT**: Semiconducting Materials from Analogy and Chemical Theory
 - **Chemeleon**: Crystal structure prediction and analysis
 - **MACE**: Machine learning ACE force fields

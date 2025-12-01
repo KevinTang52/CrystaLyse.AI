@@ -89,7 +89,7 @@ class EnhancedCLI:
         welcome_text = Text()
         welcome_text.append("Welcome to ", style="dim")
         gradient_text = create_gradient_text(
-            "CrystaLyse.AI", 
+            "Crystalyse", 
             GradientStyle.CRYSTALYSE_BLUE,
             theme_manager.current_theme.get_gradient_colors()
         )
@@ -198,7 +198,7 @@ class EnhancedCLI:
     def show_help(self):
         """Display help information."""
         help_text = Text()
-        help_text.append("CrystaLyse.AI Help\n\n", style="title")
+        help_text.append("Crystalyse Help\n\n", style="title")
 
         sections = [
             ("Basic Commands", [

@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI v1.2 introduces comprehensive session management for persistent research workflows. Sessions enable multi-day materials discovery projects with full conversation context retention.
+Crystalyse v1.2 introduces comprehensive session management for persistent research workflows. Sessions enable multi-day materials discovery projects with full conversation context retention.
 
 ## Core Features
 

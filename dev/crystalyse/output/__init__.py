@@ -1,5 +1,5 @@
 """
-Output formatting and export functionality for CrystaLyse.AI.
+Output formatting and export functionality for Crystalyse.
 
 This module provides various output formats for query results including:
 - Dual JSON/Markdown output for individual queries

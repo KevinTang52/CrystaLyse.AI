@@ -1,4 +1,4 @@
-site_name: CrystaLyse.AI Documentation
+site_name: Crystalyse Documentation
 site_description: Autonomous AI agents for accelerated inorganic materials design through natural language interfaces
 site_url: https://crystalyse-ai.readthedocs.io/
 repo_url: https://github.com/ryannduma/CrystaLyse.AI
@@ -6,7 +6,7 @@ repo_name: ryannduma/CrystaLyse.AI
 edit_uri: edit/main/docs/
 
 # Copyright
-copyright: Copyright &copy; 2025 CrystaLyse.AI Development Team
+copyright: Copyright &copy; 2025 Crystalyse Development Team
 # Theme configuration
 theme:
   name: material

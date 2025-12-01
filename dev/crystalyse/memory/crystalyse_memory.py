@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class CrystaLyseMemory:
     """
-    Main memory system for CrystaLyse.AI agent.
+    Main memory system for Crystalyse agent.
     
     Provides a unified interface to all memory layers while maintaining
     the simplicity of file-based storage. Each layer serves a specific

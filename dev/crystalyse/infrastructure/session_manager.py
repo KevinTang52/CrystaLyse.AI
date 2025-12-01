@@ -1,5 +1,5 @@
 """
-Persistent Session Manager for CrystaLyse.AI
+Persistent Session Manager for Crystalyse
 Manages long-lived sessions to maintain context and connections across queries.
 """
 import asyncio

@@ -1,10 +1,10 @@
 # CLI Usage Guide
 
-Complete guide to using CrystaLyse.AI from the command line.
+Complete guide to using Crystalyse from the command line.
 
 ## Overview
 
-CrystaLyse.AI provides a simple command-line interface with three primary commands:
+Crystalyse provides a simple command-line interface with three primary commands:
 
 1. **`crystalyse discover`** - Non-interactive materials discovery with provenance tracking
 2. **`crystalyse chat`** - Interactive session-based chat with adaptive clarification
@@ -78,6 +78,8 @@ crystalyse discover QUERY [OPTIONS]
 ```bash
 --provenance-dir PATH   Custom directory for provenance output (default: ./provenance_output)
 --hide-summary          Hide provenance summary table (data still captured)
+--mode [creative|rigorous|adaptive]   Analysis mode (overrides global option)
+--project, -p TEXT      Project name (overrides global option)
 ```
 
 **Provenance is always enabled** - every query generates a complete audit trail including:
@@ -103,6 +105,9 @@ crystalyse discover "Quick test" --hide-summary
 
 # Adaptive mode (automatically selects creative or rigorous)
 crystalyse --mode adaptive discover "Design high-capacity battery materials"
+
+# Override global mode with local flag
+crystalyse --mode rigorous discover "Quick check" --mode creative
 ```
 
 **Expected output:**
@@ -183,7 +188,7 @@ The chat interface does not have built-in slash commands. It's a simple conversa
 $ crystalyse chat -u researcher -s solar_study
 
 ╭──────────────────────────────────────────────────────────╮
-│         CrystaLyse.AI - Interactive Chat Session         │
+│         Crystalyse - Interactive Chat Session         │
 │                                                          │
 │ User: researcher                                         │
 │ Session: solar_study                                     │
@@ -194,7 +199,7 @@ You: Find perovskites for solar cells
 
 [Agent processes query with adaptive clarification if needed...]
 
-CrystaLyse: I've analysed several perovskite compositions for
+Crystalyse: I've analysed several perovskite compositions for
 photovoltaic applications. Here are the key findings:
 
 Most Stable Candidates:
@@ -205,7 +210,7 @@ Most Stable Candidates:
 
 You: What about band gaps?
 
-CrystaLyse: Based on the structures generated:
+Crystalyse: Based on the structures generated:
 
 Band Gap Estimates:
 - CsGeI₃: ~1.6 eV (excellent for single-junction solar cells)
@@ -239,7 +244,7 @@ crystalyse user-stats [OPTIONS]
 ```bash
 $ crystalyse user-stats -u researcher1
 
-╭─────────────────── CrystaLyse Learning Profile ───────────────────╮
+╭─────────────────── Crystalyse Learning Profile ───────────────────╮
 │ User: researcher1                                                 │
 │ Interactions: 15                                                  │
 │ Detected Expertise: Expert                                        │
@@ -286,7 +291,7 @@ crystalyse analyse-provenance --latest --dir ./my_research/provenance
 
 ## Analysis Modes
 
-CrystaLyse.AI supports three operational modes that control the analysis workflow:
+Crystalyse supports three operational modes that control the analysis workflow:
 
 | Mode | Duration | Structures | Tools Used | Use Case |
 |------|----------|-----------|------------|----------|
@@ -313,7 +318,7 @@ crystalyse --mode adaptive discover "Let system decide"  # Default
 
 ## Environment Variables
 
-Configure CrystaLyse.AI behaviour through environment variables:
+Configure Crystalyse behaviour through environment variables:
 
 ```bash
 # Required
@@ -368,7 +373,7 @@ timeouts:
 
 ## First Run Auto-Downloads
 
-On first execution, CrystaLyse automatically downloads required data:
+On first execution, Crystalyse automatically downloads required data:
 
 **Chemeleon Model Checkpoints** (~600 MB):
 - Downloaded to `~/.cache/crystalyse/chemeleon_checkpoints/`
@@ -493,7 +498,7 @@ done
 import subprocess
 
 def discover_material(formula, mode="creative"):
-    """Run CrystaLyse discovery from Python."""
+    """Run Crystalyse discovery from Python."""
     cmd = [
         "crystalyse",
         "--mode", mode,
@@ -546,4 +551,4 @@ find ./provenance_output -type d -mtime +30 -exec rm -rf {} +
 find . -name "*_3dmol.html" -mtime +7 -delete
 ```
 
-This CLI guide reflects the actual implementation in CrystaLyse.AI v1.0.0. For API-level integration, see the reference documentation.
+This CLI guide reflects the actual implementation in Crystalyse v1.0.0. For API-level integration, see the reference documentation.

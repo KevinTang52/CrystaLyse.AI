@@ -1,5 +1,5 @@
 """
-Dynamic Mode Adaptation for CrystaLyse.AI
+Dynamic Mode Adaptation for Crystalyse
 
 Monitors execution and enables runtime mode switching based on user feedback
 and execution context. This creates a truly responsive system that adapts

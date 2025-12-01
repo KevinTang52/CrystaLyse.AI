@@ -1,16 +1,16 @@
 # Error Reference
 
-Comprehensive reference for CrystaLyse.AI error codes, messages, and troubleshooting guidance.
+Comprehensive reference for Crystalyse error codes, messages, and troubleshooting guidance.
 
 ## Overview
 
-CrystaLyse.AI provides detailed error information to help diagnose and resolve issues quickly. Errors are categorised by source and include specific guidance for resolution.
+Crystalyse provides detailed error information to help diagnose and resolve issues quickly. Errors are categorised by source and include specific guidance for resolution.
 
 ## Error Categories
 
 ### Exit Codes
 
-Standard process exit codes used by CrystaLyse.AI:
+Standard process exit codes used by Crystalyse:
 
 | Code | Category | Description |
 |------|----------|-------------|
@@ -198,7 +198,7 @@ Error: Session 'project_name' not found for user 'researcher'
 Error: Cannot access session database - file locked
 ```
 
-**Cause**: Another CrystaLyse.AI process accessing database
+**Cause**: Another Crystalyse process accessing database
 **Solution**:
 1. Wait for other process to complete
 2. Check for hung processes
@@ -219,7 +219,7 @@ Error: Session database corrupted - cannot read session data
 
 #### Python Version Incompatible
 ```
-Error: CrystaLyse.AI requires Python 3.11 or higher (found 3.9.2)
+Error: Crystalyse requires Python 3.11 or higher (found 3.9.2)
 ```
 
 **Cause**: Python version too old
@@ -287,7 +287,7 @@ grep "ERROR" ~/.crystalyse/crystalyse.log
 
 ### Automatic Recovery
 
-CrystaLyse.AI includes automatic recovery for:
+Crystalyse includes automatic recovery for:
 
 - **Temporary API failures**: Automatic retry with exponential backoff
 - **MCP server restart**: Automatic server restart on failure
@@ -339,7 +339,7 @@ When reporting errors, provide:
 Environment:
 - OS: Ubuntu 22.04
 - Python: 3.11.5
-- CrystaLyse.AI: v1.0.0
+- Crystalyse: v1.0.0
 
 Command:
 crystalyse analyse "Find battery materials" --mode rigorous

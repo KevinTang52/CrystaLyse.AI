@@ -1,6 +1,6 @@
 # Visualisation Suite - 3D Structures and Analysis
 
-The CrystaLyse.AI visualisation suite combines 3D molecular viewing with comprehensive materials analysis, providing interactive visualisations and professional analysis plots for crystal structures and their properties.
+The Crystalyse visualisation suite combines 3D molecular viewing with comprehensive materials analysis, providing interactive visualisations and professional analysis plots for crystal structures and their properties.
 
 ## Overview
 
@@ -13,7 +13,7 @@ The visualisation suite integrates multiple tools to provide complete visual ana
 
 **Key Strength**: Seamless integration of interactive 3D visualisation with quantitative structural analysis.
 
-## Integration in CrystaLyse.AI
+## Integration in Crystalyse
 
 ### Availability by Mode
 - **Creative Mode**: ✅ 3D molecular visualisation
@@ -189,7 +189,7 @@ coord_result = coordination_environment_analysis(
 
 ## Practical Usage
 
-### In CrystaLyse.AI Workflows
+### In Crystalyse Workflows
 
 #### Creative Mode Visualisation
 ```bash
@@ -459,7 +459,7 @@ graph LR
 
 ### Automatic Integration
 
-Visualisations are automatically generated in CrystaLyse.AI workflows:
+Visualisations are automatically generated in Crystalyse workflows:
 
 ```python
 # Automatic visualisation pipeline
@@ -526,7 +526,7 @@ characterisation = {
 
 ## Citation
 
-If you use the CrystaLyse.AI visualisation suite, please cite the underlying tools:
+If you use the Crystalyse visualisation suite, please cite the underlying tools:
 
 ### Pymatviz (Analysis Plots)
 ```bibtex
@@ -547,7 +547,7 @@ If you use the CrystaLyse.AI visualisation suite, please cite the underlying too
 
 ## Summary
 
-The CrystaLyse.AI visualisation suite provides comprehensive visual and analytical tools for understanding crystal structures and their properties. The integration of interactive 3D visualisation with quantitative structural analysis enables both rapid assessment and detailed research-grade characterisation.
+The Crystalyse visualisation suite provides comprehensive visual and analytical tools for understanding crystal structures and their properties. The integration of interactive 3D visualisation with quantitative structural analysis enables both rapid assessment and detailed research-grade characterisation.
 
 **Key Benefits**:
 - Interactive 3D molecular visualisation for immediate understanding
@@ -556,6 +556,6 @@ The CrystaLyse.AI visualisation suite provides comprehensive visual and analytic
 - Seamless integration with structure prediction and energy analysis
 - Support for comparative studies and validation
 
-The visualisation suite completes the CrystaLyse.AI analysis pipeline, providing the critical visual and analytical tools needed to understand and validate computational materials design results.
+The visualisation suite completes the Crystalyse analysis pipeline, providing the critical visual and analytical tools needed to understand and validate computational materials design results.
 
 For detailed usage examples and integration patterns, see the [CLI Usage Guide](../guides/cli_usage.md) and [Analysis Modes Documentation](../concepts/analysis_modes.md).

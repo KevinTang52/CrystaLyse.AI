@@ -1,10 +1,10 @@
 # CLI Reference
 
-Complete command-line interface reference for CrystaLyse.AI.
+Complete command-line interface reference for Crystalyse.
 
 ## Overview
 
-CrystaLyse.AI provides a unified command-line interface with multiple commands for different workflows:
+Crystalyse provides a unified command-line interface with multiple commands for different workflows:
 
 - **Analysis Commands**: Direct materials analysis and evaluation
 - **Session Commands**: Interactive conversation management
@@ -209,7 +209,7 @@ crystalyse chat -m rigorous
 
 ## Exit Codes
 
-CrystaLyse.AI uses standard exit codes:
+Crystalyse uses standard exit codes:
 
 | Code | Meaning |
 |------|---------|

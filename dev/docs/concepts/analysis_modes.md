@@ -1,6 +1,6 @@
-# Analysis Modes - CrystaLyse.AI v1.0.0
+# Analysis Modes - Crystalyse v1.0.0
 
-CrystaLyse.AI v1.0.0 provides three intelligent analysis modes powered by multi-agent orchestration and enhanced UX, allowing you to balance speed, accuracy, and user experience based on your research needs.
+Crystalyse v1.0.0 provides three intelligent analysis modes powered by multi-agent orchestration and enhanced UX, allowing you to balance speed, accuracy, and user experience based on your research needs.
 
 ## Overview
 
@@ -331,4 +331,4 @@ Output focus:
 - Professional analysis plots
 - Publication-ready results
 
-The choice between creative and rigorous modes allows CrystaLyse.AI to adapt to your specific research needs, from rapid exploration to comprehensive validation.
+The choice between creative and rigorous modes allows Crystalyse to adapt to your specific research needs, from rapid exploration to comprehensive validation.

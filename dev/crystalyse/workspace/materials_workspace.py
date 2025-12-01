@@ -1,5 +1,5 @@
 """
-Workspace management for CrystaLyse.AI projects.
+Workspace management for Crystalyse projects.
 """
 
 from pathlib import Path

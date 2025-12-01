@@ -162,7 +162,7 @@ for struct in structures:
 
 - Python 3.11+
 - OpenAI Agents SDK
-- CrystaLyse.AI dev environment
+- Crystalyse dev environment
 - Conda environment: `rust`
 
 ## Installation
@@ -172,7 +172,7 @@ for struct in structures:
 conda activate rust
 
 # Add to Python path
-export PYTHONPATH="/home/ryan/mycrystalyse/CrystaLyse.AI/provenance_system:$PYTHONPATH"
+export PYTHONPATH="/home/ryan/mycrystalyse/Crystalyse/provenance_system:$PYTHONPATH"
 
 # Test installation
 python -c "from provenance_system import ProvenanceTraceHandler"

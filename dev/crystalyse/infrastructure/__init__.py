@@ -1,5 +1,5 @@
 """
-Infrastructure components for CrystaLyse.AI
+Infrastructure components for Crystalyse
 Provides connection pooling, retry logic, and session management.
 """
 

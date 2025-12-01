@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI's session-based architecture enables persistent, contextual interactions for materials design research. Sessions maintain state across multiple queries, allowing for deep, exploratory analysis that builds upon previous findings.
+Crystalyse's session-based architecture enables persistent, contextual interactions for materials design research. Sessions maintain state across multiple queries, allowing for deep, exploratory analysis that builds upon previous findings.
 
 ## Session Architecture
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI provides a sophisticated command-line interface designed specifically for materials design workflows. The UI combines intuitive interaction patterns with powerful crystal structure visualisation capabilities, offering both novice-friendly guidance and expert-level efficiency for materials researchers.
+Crystalyse provides a sophisticated command-line interface designed specifically for materials design workflows. The UI combines intuitive interaction patterns with powerful crystal structure visualisation capabilities, offering both novice-friendly guidance and expert-level efficiency for materials researchers.
 
 ## UI Architecture
 
@@ -42,14 +42,14 @@ $ crystalyse interactive
                   Materials Design Platform
 ═══════════════════════════════════════════════════════════
 
-Welcome to CrystaLyse.AI! Type 'help' for commands or ask any materials design question.
+Welcome to Crystalyse! Type 'help' for commands or ask any materials design question.
 
 crystalyse> analyse LiFePO4
 ```
 
 ### Command Structure
 
-CrystaLyse.AI supports multiple command patterns:
+Crystalyse supports multiple command patterns:
 
 ```bash
 # Direct commands

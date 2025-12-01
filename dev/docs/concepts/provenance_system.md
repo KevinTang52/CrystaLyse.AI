@@ -1,4 +1,4 @@
-# CrystaLyse.AI Provenance System - Complete Technical Documentation
+# Crystalyse Provenance System - Complete Technical Documentation
 
 **Version**: v1.0.0
 
@@ -22,7 +22,7 @@
 
 ## Overview
 
-The provenance system provides complete audit trails for all materials discovery operations in CrystaLyse.AI. It captures events, materials, MCP tool calls, and performance metrics in a structured format suitable for reproducibility, analysis, and debugging.
+The provenance system provides complete audit trails for all materials discovery operations in Crystalyse. It captures events, materials, MCP tool calls, and performance metrics in a structured format suitable for reproducibility, analysis, and debugging.
 
 ### Design Philosophy
 
@@ -1172,11 +1172,11 @@ for material in materials['materials']:
 **Code**:
 ```python
 # Correct
-sys.path.insert(0, "/path/to/CrystaLyse.AI")  # Parent
+sys.path.insert(0, "/path/to/Crystalyse")  # Parent
 import provenance_system  # Works
 
 # Incorrect
-sys.path.insert(0, "/path/to/CrystaLyse.AI/provenance_system")  # Module itself
+sys.path.insert(0, "/path/to/Crystalyse/provenance_system")  # Module itself
 import provenance_system  # ModuleNotFoundError!
 ```
 
@@ -1374,4 +1374,4 @@ crystalyse
 
 ## Summary
 
-The CrystaLyse.AI provenance system provides comprehensive, always-on audit trails for all materials discovery operations. It captures complete event streams, materials data, MCP tool calls, and performance metrics in a structured format suitable for reproducibility, debugging, and analysis.
+The Crystalyse provenance system provides comprehensive, always-on audit trails for all materials discovery operations. It captures complete event streams, materials data, MCP tool calls, and performance metrics in a structured format suitable for reproducibility, debugging, and analysis.

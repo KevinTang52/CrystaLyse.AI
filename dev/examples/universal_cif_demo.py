@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Universal CIF Visualization Demo for CrystaLyse.AI
+Universal CIF Visualization Demo for Crystalyse
 
 This script demonstrates how to use the integrated universal CIF visualizer 
-capabilities in your CrystaLyse.AI workflow.
+capabilities in your Crystalyse workflow.
 """
 
 from pathlib import Path
 from crystalyse.output.universal_cif_visualizer import UniversalCIFVisualizer
 
 def main():
-    print("🔬 Universal CIF Visualizer Demo for CrystaLyse.AI")
+    print("🔬 Universal CIF Visualizer Demo for Crystalyse")
     print("=" * 50)
 
     # Initialize the visualizer

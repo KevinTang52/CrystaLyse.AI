@@ -1,4 +1,4 @@
-"""Visualization MCP Server for CrystaLyse.AI"""
+"""Visualization MCP Server for Crystalyse"""
 
 from mcp.server.fastmcp import FastMCP
 from .tools import (

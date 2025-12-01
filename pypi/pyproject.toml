@@ -9,10 +9,10 @@ description = "DEPRECATED - Use 'crystalyse' package instead. This package is no
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "CrystaLyse.AI Development Team"},
+    {name = "Crystalyse Development Team"},
 ]
 maintainers = [
-    {name = "CrystaLyse.AI Development Team"},
+    {name = "Ryan Nduma"},
 ]
 keywords = [
     "materials-design",

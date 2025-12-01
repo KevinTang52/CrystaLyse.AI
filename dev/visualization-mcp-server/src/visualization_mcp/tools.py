@@ -1,4 +1,4 @@
-"""Visualization tools for CrystaLyse.AI"""
+"""Visualization tools for Crystalyse"""
 
 import json
 import sys

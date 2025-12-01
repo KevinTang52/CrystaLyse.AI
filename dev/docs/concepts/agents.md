@@ -2,7 +2,7 @@
 
 ## Overview
 
-CrystaLyse.AI v1.0.0 uses a single agent architecture built on the OpenAI Agents SDK. The `EnhancedCrystaLyseAgent` coordinates with MCP servers and workspace tools to provide materials discovery capabilities with adaptive clarification and provenance tracking.
+Crystalyse v1.0.0 uses a single agent architecture built on the OpenAI Agents SDK. The `EnhancedCrystaLyseAgent` coordinates with MCP servers and workspace tools to provide materials discovery capabilities with adaptive clarification and provenance tracking.
 
 ## Architecture
 

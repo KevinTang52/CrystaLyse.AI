@@ -1,6 +1,6 @@
-# CrystaLyse.AI Documentation
+# Crystalyse Documentation
 
-Welcome to the comprehensive documentation for CrystaLyse.AI v1.0.0.
+Welcome to the comprehensive documentation for Crystalyse v1.0.0.
 
 ## Documentation Structure
 
@@ -55,7 +55,7 @@ For new users, we recommend starting with the [Quick Start Guide](guides/quick-s
 ## Key Concepts
 
 ### Enhanced Agent Architecture
-CrystaLyse.AI features a single `EnhancedCrystaLyseAgent` that provides intelligent tool coordination, dynamic mode switching, and adaptive clarification through the OpenAI Agents SDK.
+Crystalyse features a single `EnhancedCrystaLyseAgent` that provides intelligent tool coordination, dynamic mode switching, and adaptive clarification through the OpenAI Agents SDK.
 
 ### Three-Mode Analysis System
 - **Adaptive Mode** (Default) - Enhanced clarification with context-aware tool selection
