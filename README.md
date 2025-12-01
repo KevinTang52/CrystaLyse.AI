@@ -205,11 +205,11 @@ If you use Crystalyse in your research, please cite the underlying tools:
 
 Crystalyse builds on open-source tools from the materials science community:
 
-- **SMACT** - Semiconducting Materials by Analogy and Chemical Theory
+- **SMACT** - Cheminformatics tools for highthrouput screening
 - **Chemeleon** - AI-powered crystal structure prediction
-- **MACE** - Machine learning ACE force fields
-- **PyMatGen** - Python Materials Genomics
-- **Pymatviz** - Materials visualisation toolkit
+- **MACE** - Foundation models for atomistic materials chemistry
+- **PyMatGen** - Robust, open-source Python library for materials analysis
+- **Pymatviz** - A toolkit for visualizations in materials informatics.
 - **OpenAI Agents SDK** - Agent orchestration framework
 
 This work was supported by EPSRC project EP/X037754/1 and the AIchemy hub (grants EP/Y028775/1, EP/Y028759/1).
