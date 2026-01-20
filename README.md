@@ -8,6 +8,7 @@
 [![codecov](https://codecov.io/gh/ryannduma/CrystaLyse.AI/branch/master/graph/badge.svg)](https://codecov.io/gh/ryannduma/CrystaLyse.AI)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![GitHub issues](https://img.shields.io/github/issues-raw/ryannduma/CrystaLyse.AI)](https://github.com/ryannduma/CrystaLyse.AI/issues)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ryannduma/CrystaLyse.AI)
 
 **Version 1.0.0**
 
