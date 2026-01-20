@@ -1,0 +1,60 @@
+name: Feature Request
+description: Propose a new feature for Crystalyse
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! We appreciate your ideas for improving Crystalyse.
+
+        Before submitting:
+        1. Search existing issues - someone may have already proposed this
+        2. If you find a similar request, add a reaction instead of opening a new one
+
+  - type: textarea
+    id: feature
+    attributes:
+      label: Feature Description
+      description: Describe the feature you'd like to see
+      placeholder: |
+        I would like Crystalyse to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would you use this feature? What problem does it solve?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What area does this feature relate to?
+      options:
+        - New tool integration
+        - CLI improvements
+        - Analysis modes
+        - Memory/session system
+        - Provenance tracking
+        - Visualization
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any workarounds or alternative approaches?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information, mockups, or references

@@ -1,0 +1,86 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Crystalyse
+labels: ["bug", "needs triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please provide as much detail as possible.
+
+        Before submitting, please:
+        1. Check existing issues to avoid duplicates
+        2. Ensure you're using the latest version (`pip install --upgrade crystalyse`)
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Initial Checks
+      options:
+        - label: I confirm I'm using the latest version of Crystalyse
+          required: true
+        - label: I searched existing issues and this hasn't been reported
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Crystalyse Version
+      description: Output of `crystalyse --version` or `pip show crystalyse`
+      placeholder: "1.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: Output of `python --version`
+      placeholder: "3.11.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Analysis Mode
+      description: Which mode were you using?
+      options:
+        - Creative
+        - Rigorous
+        - Adaptive
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Run `crystalyse discover "..."`
+        2. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error Message / Logs
+      description: Paste any error messages or relevant log output
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information (OS, GPU, environment, etc.)
