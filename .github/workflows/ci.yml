@@ -1,0 +1,294 @@
+# CrystaLyse CI Pipeline
+# Runs linting, type checking, and tests on pull requests and pushes
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "feature/**"
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allow manual triggering
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Use fake API key for tests that don't need real API
+  OPENAI_MDG_API_KEY: fake-for-tests
+  CRYSTALYSE_DEBUG: "false"
+  PYTHON_VERSION_DEFAULT: "3.11"
+
+jobs:
+  # =============================================================================
+  # Change Detection (Codex pattern)
+  # =============================================================================
+  changed:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      python_code: ${{ steps.detect.outputs.python_code }}
+      docs_only: ${{ steps.detect.outputs.docs_only }}
+      ci_config: ${{ steps.detect.outputs.ci_config }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: detect
+        run: |
+          # Get changed files
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+
+          # Handle initial commit
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "python_code=true" >> $GITHUB_OUTPUT
+            echo "docs_only=false" >> $GITHUB_OUTPUT
+            echo "ci_config=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null || echo "")
+
+          # Check for Python code changes
+          if echo "$CHANGED" | grep -qE '^dev/.*\.py$|^chemistry-.*-server/|^visualization-mcp-server/'; then
+            echo "python_code=true" >> $GITHUB_OUTPUT
+          else
+            echo "python_code=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if only docs changed
+          NON_DOCS=$(echo "$CHANGED" | grep -vE '^docs/|^mkdocs\.yml$|\.md$|\.rst$' || true)
+          if [ -z "$NON_DOCS" ]; then
+            echo "docs_only=true" >> $GITHUB_OUTPUT
+          else
+            echo "docs_only=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for CI config changes
+          if echo "$CHANGED" | grep -qE '^\.github/|pyproject\.toml|\.pre-commit'; then
+            echo "ci_config=true" >> $GITHUB_OUTPUT
+          else
+            echo "ci_config=false" >> $GITHUB_OUTPUT
+          fi
+
+  # =============================================================================
+  # Lint Job
+  # =============================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: changed
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff format check
+        run: ruff format --check dev/
+
+      - name: Run ruff lint
+        run: ruff check dev/
+
+  # =============================================================================
+  # Type Check Job
+  # =============================================================================
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    needs: changed
+    if: needs.changed.outputs.python_code == 'true'
+    continue-on-error: true # Allow failure initially
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+
+      - name: Install dependencies
+        run: |
+          pip install pyright
+          cd dev && pip install -e ".[dev]" --no-deps || true
+
+      - name: Run pyright
+        run: |
+          cd dev
+          pyright --project pyproject.toml || echo "Type checking completed with warnings"
+
+  # =============================================================================
+  # Test Job (Matrix)
+  # =============================================================================
+  test:
+    name: Test (Python ${{ matrix.python-version }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: changed
+    if: needs.changed.outputs.docs_only != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.11", "3.12"]  # 3.10 removed: chemeleon-dng requires >=3.11
+        include:
+          # Also test on macOS with Python 3.11
+          - os: macos-latest
+            python-version: "3.11"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('dev/pyproject.toml') }}
+          restore-keys: |
+            pip-${{ matrix.os }}-${{ matrix.python-version }}-
+            pip-${{ matrix.os }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd dev && pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          cd dev
+          pytest tests/ \
+            -v \
+            --cov=crystalyse \
+            --cov-report=xml \
+            --cov-report=term \
+            -m "not slow and not requires_gpu and not requires_api"
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./dev/coverage.xml
+          flags: unittests
+          name: codecov-crystalyse
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  # =============================================================================
+  # Docs Build Job
+  # =============================================================================
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    needs: changed
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+
+      - name: Install docs dependencies
+        run: |
+          pip install mkdocs mkdocs-material "mkdocstrings[python]" mkdocs-minify-plugin mike
+
+      - name: Build docs (strict mode)
+        run: mkdocs build --strict
+
+  # =============================================================================
+  # Contract Tests Job
+  # =============================================================================
+  contract:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    needs: changed
+    if: needs.changed.outputs.ci_config == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run contract tests
+        run: |
+          cd dev
+          pytest tests/contract/ -v
+
+  # =============================================================================
+  # Gatherer Job (from Codex pattern)
+  # Allows docs-only PRs to pass required checks
+  # =============================================================================
+  ci-required:
+    name: CI Required
+    runs-on: ubuntu-latest
+    needs: [changed, lint, test, docs]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          # If docs_only, we only need lint and docs to pass
+          if [ "${{ needs.changed.outputs.docs_only }}" = "true" ]; then
+            if [ "${{ needs.lint.result }}" != "success" ]; then
+              echo "Lint failed"
+              exit 1
+            fi
+            if [ "${{ needs.docs.result }}" != "success" ]; then
+              echo "Docs build failed"
+              exit 1
+            fi
+            echo "Docs-only PR: lint and docs passed"
+            exit 0
+          fi
+
+          # Otherwise, check all required jobs
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "Lint failed"
+            exit 1
+          fi
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.docs.result }}" != "success" ]; then
+            echo "Docs build failed"
+            exit 1
+          fi
+
+          echo "All required checks passed"

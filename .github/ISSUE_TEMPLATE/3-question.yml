@@ -1,0 +1,31 @@
+name: Question
+description: Ask a question about using Crystalyse
+labels: ["question"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about Crystalyse? We're happy to help!
+
+        For general discussion, consider using [GitHub Discussions](https://github.com/ryannduma/CrystaLyse.AI/discussions) instead.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to accomplish? Any relevant background?
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What I've Tried
+      description: Have you tried anything or looked at any documentation?
