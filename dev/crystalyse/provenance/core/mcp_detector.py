@@ -17,44 +17,113 @@ class MCPDetector:
     in events. This detector identifies the actual tool by parsing output structure.
     """
 
+    #TOOL_SIGNATURES = {
+        # Original tools
+        #"comprehensive_materials_analysis": ["generated_structures", "energy_calculations"],
+        #"creative_discovery_pipeline": ["generated_structures", "analysis_mode", "pipeline_steps"],
+        #"validate_composition": ["is_valid", "charge_balanced", "electronegativity_test"],
+        #"estimate_band_gap": ["band_gap_ev", "band_gap_estimate", "confidence"],
+        #"predict_dopants": ["n_type_dopants", "p_type_dopants", "species"],
+        #"smact_validate_fast": ["composition", "is_valid", "success", "use_pauling_test"],
+        #"generate_ml_representation": ["representation", "composition", "vector_length"],
+        #"filter_compositions": ["valid_compositions", "invalid_compositions", "total_processed"],
+        #"generate_crystal_csp": ["success", "formula", "predicted_structures", "checkpoint_used"],
+        #"calculate_formation_energy": [
+            #"formation_energy",
+            #"energy_per_atom",
+            #"total_energy",
+            #"composition",
+        #],
+        #"relax_structure": [
+            #"relaxed_structure",
+            #"initial_energy",
+            #"final_energy",
+            #"relaxation_steps",
+        #],
+        #"calculate_stress": ["stress_tensor", "pressure", "von_mises_stress"],
+        #"fit_equation_of_state": ["bulk_modulus", "bulk_modulus_derivative", "equilibrium_volume"],
+        #"list_foundation_models": ["models", "total_models"],
+        #"analyze_space_group": ["space_group", "number", "crystal_system", "point_group"],
+        #"calculate_energy_above_hull": [
+        #    "energy_above_hull",
+        #   "is_stable",
+        #    "is_metastable",
+        #    "decomposition_products",
+        #],
+        #"analyze_coordination": ["site_environments", "average_coordination"],
+        #"analyze_oxidation_states": ["oxidation_states", "is_valid", "charge_balanced"],
+        #"save_structure_as_cif": ["success", "file_path", "structure_info"],
+        #"visualize_structure": ["visualization_url", "structure_data"],
+    #}
+
     TOOL_SIGNATURES = {
         # Original tools
         "comprehensive_materials_analysis": ["generated_structures", "energy_calculations"],
         "creative_discovery_pipeline": ["generated_structures", "analysis_mode", "pipeline_steps"],
-        "validate_composition": ["is_valid", "charge_balanced", "electronegativity_test"],
+        
+        # Validation (Matches BOTH 'valid' and 'is_valid')
+        "validate_composition": [
+            "valid", "is_valid", 
+            "charge_balanced", "electronegativity_test"
+        ],
+        "smact_validate_fast": [
+            "composition", "valid", "is_valid", "success", "use_pauling_test"
+        ],
+        "filter_compositions": ["valid_compositions", "invalid_compositions", "total_processed"],
+        "analyze_oxidation_states": [
+            "oxidation_states", "valid", "is_valid", "charge_balanced"
+        ],
+
+        # Analysis
         "estimate_band_gap": ["band_gap_ev", "band_gap_estimate", "confidence"],
         "predict_dopants": ["n_type_dopants", "p_type_dopants", "species"],
-        "smact_validate_fast": ["composition", "is_valid", "success", "use_pauling_test"],
         "generate_ml_representation": ["representation", "composition", "vector_length"],
-        "filter_compositions": ["valid_compositions", "invalid_compositions", "total_processed"],
-        "generate_crystal_csp": ["success", "formula", "predicted_structures", "checkpoint_used"],
+        
+        # Space Group (Matches BOTH 'space_group' and 'space_group_symbol')
+        "analyze_space_group": [
+            "space_group", "space_group_symbol", 
+            "number", "space_group_number", 
+            "crystal_system", "hall_symbol", "point_group"
+        ],  
+        "analyze_coordination": ["site_environments", "average_coordination"],
+        
+        # Generation (CSP)
+        # REMOVED "success" and "formula" to prevent EOS confusion
+        "generate_crystal_csp": [
+            "predicted_structures", "checkpoint_used", "computation_time"
+        ], 
+
+        # Calculations (MACE / Physics)
         "calculate_formation_energy": [
-            "formation_energy",
-            "energy_per_atom",
-            "total_energy",
-            "composition",
+            "formation_energy", "energy_per_atom", "total_energy"
         ],
         "relax_structure": [
-            "relaxed_structure",
-            "initial_energy",
-            "final_energy",
-            "relaxation_steps",
+            "relaxed_structure", "final_energy", "relaxation_steps"
         ],
         "calculate_stress": ["stress_tensor", "pressure", "von_mises_stress"],
-        "fit_equation_of_state": ["bulk_modulus", "bulk_modulus_derivative", "equilibrium_volume"],
-        "list_foundation_models": ["models", "total_models"],
-        "analyze_space_group": ["space_group", "number", "crystal_system", "point_group"],
-        "calculate_energy_above_hull": [
-            "energy_above_hull",
-            "is_stable",
-            "is_metastable",
-            "decomposition_products",
+        
+        # EOS (Matches BOTH 'b0' and 'bulk_modulus')
+        "fit_equation_of_state": [
+            "b0", "bulk_modulus", 
+            "b0_prime", "bulk_modulus_derivative", 
+            "v0", "equilibrium_volume", 
+            "eos_type", "volumes", "energies"
         ],
-        "analyze_coordination": ["site_environments", "average_coordination"],
-        "analyze_oxidation_states": ["oxidation_states", "is_valid", "charge_balanced"],
+        
+        "calculate_energy_above_hull": [
+            "energy_above_hull", "is_stable", "decomposition_products"
+        ],
+        
+        # Utility / Vis
+        "list_foundation_models": ["models", "total_models"],
         "save_structure_as_cif": ["success", "file_path", "structure_info"],
         "visualize_structure": ["visualization_url", "structure_data"],
     }
+
+
+
+
+
 
     @classmethod
     def detect_tool(cls, output: Any) -> str | None:

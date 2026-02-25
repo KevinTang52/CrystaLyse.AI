@@ -9,6 +9,11 @@ All tools use clean imports without sys.path manipulation.
 Total Tools: 20 MCP endpoints
 """
 
+import itertools
+import smact
+from pymatgen.core import Composition
+
+
 import logging
 import warnings
 from typing import Any
@@ -136,6 +141,68 @@ def validate_composition(
         include_alloys=include_alloys,
         oxidation_states_set=oxidation_states_set,
     )
+
+    # 2. Parse the formula to get counts (e.g., Ca=1, Ti=1, O=3)
+    try:
+        comp_obj = Composition(composition)
+        el_amt = comp_obj.get_el_amt_dict()
+    except Exception:
+        return result  # If we can't parse it, return original result
+
+    # 3. VERIFY: Check if the library's guess acts correctly
+    current_charge = 0.0
+    if result.oxidation_states:
+        for el, amt in el_amt.items():
+            current_charge += amt * result.oxidation_states.get(el, 0)
+    
+    # 4. AUTO-CORRECT: If math failed (sum != 0), try to fix it!
+    if abs(current_charge) > 0.01:
+        logger.warning(f"Initial states {result.oxidation_states} failed charge check ({current_charge}). Attempting auto-correction...")
+        
+        try:
+            # Get all possible oxidation states for each element from SMACT
+            possible_states = []
+            elements = list(el_amt.keys())
+            
+            for el in elements:
+                # Get the list of allowed states (e.g., Ti -> [+2, +3, +4])
+                element_data = smact.Element(el)
+                possible_states.append(element_data.oxidation_states)
+            
+            # Cartesian Product: Try EVERY combination
+            # (e.g. Ti=+2, Ti=+3, Ti=+4 combined with O=-2)
+            found_solution = False
+            for state_combo in itertools.product(*possible_states):
+                test_charge = 0.0
+                temp_states = {}
+                
+                # Check this specific combination
+                for i, el in enumerate(elements):
+                    state = state_combo[i]
+                    test_charge += el_amt[el] * state
+                    temp_states[el] = float(state)
+                
+                # Did we find a match?
+                if abs(test_charge) < 0.01:
+                    # YES! Update the result with the winning numbers
+                    result.oxidation_states = temp_states
+                    result.valid = True
+                    result.charge_balanced = True
+                    result.message = "Valid composition (Auto-Corrected)"
+                    logger.info(f"Auto-correction successful: Found {temp_states}")
+                    found_solution = True
+                    break
+            
+            # If after trying everything we still fail (e.g. Co3O4), reject it
+            if not found_solution:
+                 result.valid = False
+                 result.charge_balanced = False
+                 result.message = f"REJECTED: No single-integer oxidation states sum to zero. (Net: {current_charge})"
+
+        except Exception as e:
+            logger.error(f"Auto-correction failed: {e}")
+            result.valid = False
+
     return result
 
 

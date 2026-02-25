@@ -145,9 +145,11 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                 self.session_id,
                 {"output_dir": str(self.output_dir), "capture_mcp_logs": capture_mcp_logs},
             )
+            self._finalized = False
         else:
             self.output_dir = None
             self.event_logger = None
+            self._finalized = False
 
     def on_event(self, event):
         """Process SDK events with provenance capture."""
@@ -224,19 +226,84 @@ class ProvenanceTraceHandler(ToolTraceHandler):
             self._save_raw_output(call_id, serialized_output)
 
         # Detect actual MCP tool
-        mcp_tool = self.mcp_detector.detect_tool(serialized_output)
+        #mcp_tool = self.mcp_detector.detect_tool(serialized_output)
+        #if mcp_tool:
+            #tool_call.mcp_tool = mcp_tool
+
+        # --- REPLACE WITH THIS NEW BLOCK ---
+        # Robust Content-Based Tool Detection
+        # This fixes the issue where tools labeled "unknown_tool" are miscategorized.
+        import json
+        try:
+            # Ensure we have a dictionary to inspect
+            if isinstance(serialized_output, str):
+                # Sometimes the output is double-serialized
+                try:
+                    output_data = json.loads(serialized_output)
+                    if isinstance(output_data, dict) and "text" in output_data:
+                         output_data = json.loads(output_data["text"])
+                except:
+                    output_data = json.loads(serialized_output)
+            else:
+                output_data = serialized_output
+
+            if isinstance(output_data, dict):
+                # 1. Check for Equation of State results (e.g., b0, v0)
+                if "eos_type" in output_data or ("b0" in output_data and "v0" in output_data):
+                    mcp_tool = "fit_equation_of_state"
+                # 2. Check for Structure Relaxation results
+                elif "relaxed_structure" in output_data or "final_energy" in output_data:
+                    mcp_tool = "relax_structure"
+                # 3. Check for Symmetry/Space Group analysis
+                elif "space_group_symbol" in output_data:
+                    mcp_tool = "analyze_space_group"
+                else:
+                    # Fallback to existing detector if no specific keys are found
+                    mcp_tool = self.mcp_detector.detect_tool(serialized_output)
+            else:
+                mcp_tool = self.mcp_detector.detect_tool(serialized_output)
+
+        except Exception:
+            # Safely handle any parsing errors by falling back to the default detector
+            mcp_tool = self.mcp_detector.detect_tool(serialized_output)
+
         if mcp_tool:
             tool_call.mcp_tool = mcp_tool
+        # -----------------------------------
 
         # Extract materials with enhanced tracking
         materials = self.materials_tracker.extract_from_output(
             serialized_output, mcp_tool or tool_call.wrapper_name
         )
+        # if materials:
+        #     tool_call.materials_extracted = materials
+        #     # Log each material with enhanced metadata
+        #     for material in materials:
+        #         self.materials_logger.log("material", material.to_dict())
+
+        # FIX: Normalize chemical formulas (e.g. CaO3Ti -> CaTiO3)
+        # This ensures your database is searchable later.
         if materials:
+            try:
+                from pymatgen.core import Composition
+                for mat in materials:
+                    # Check if formula exists and needs standardization
+                    if hasattr(mat, "formula") and mat.formula:
+                        try:
+                            # 'reduced_formula' automatically sorts elements (Ca-Ti-O)
+                            clean_formula = Composition(mat.formula).reduced_formula
+                            mat.formula = clean_formula
+                        except Exception:
+                            pass # If it's not a valid formula, leave it alone
+            except ImportError:
+                pass # If pymatgen is missing, skip this step
+
             tool_call.materials_extracted = materials
-            # Log each material with enhanced metadata
+            
+            # Log each material with the now-standardized formula
             for material in materials:
                 self.materials_logger.log("material", material.to_dict())
+
 
         # Register with value registry for render gate
         registry = get_global_registry()
@@ -251,7 +318,7 @@ class ProvenanceTraceHandler(ToolTraceHandler):
 
         # Create enhanced material record for Phase 1.5 tools
         if mcp_tool and mcp_tool.startswith(
-            ("validate_", "calculate_", "analyze_", "predict_", "generate_")
+            ("validate_", "calculate_", "analyze_", "predict_", "generate_", "relax_", "fit_")
         ):
             enhanced_record = create_enhanced_material_record(
                 mcp_tool, serialized_output, datetime.now().isoformat()
@@ -297,16 +364,46 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                 "reasoning", {"length": len(item.content), "timestamp": datetime.now().isoformat()}
             )
 
+    #def _extract_tool_name(self, item) -> str:
+        #"""Extract tool name from item."""
+        #try:
+            #if hasattr(item.raw_item, "function"):
+                #func = item.raw_item.function
+                #if hasattr(func, "name"):
+                    #return func.name
+        #except Exception:
+            #pass
+        #return "unknown_tool"
+
     def _extract_tool_name(self, item) -> str:
-        """Extract tool name from item."""
+        """Extract tool name from item robustly."""
+        # 1. Try direct attribute on the item wrapper
+        if hasattr(item, "name") and item.name:
+            return item.name
+            
+        # 2. Try function name on the item wrapper (Common in Agent SDKs)
+        if hasattr(item, "function") and hasattr(item.function, "name"):
+            return item.function.name
+            
+        # 3. Try raw_item (The underlying OpenAI SDK object)
+        if hasattr(item, "raw_item"):
+            raw = item.raw_item
+            if hasattr(raw, "function") and hasattr(raw.function, "name"):
+                return raw.function.name
+            if hasattr(raw, "name"):  # Sometimes name is at the top level
+                return raw.name
+                
+        # 4. Try parsing from dictionary dump (Last resort)
         try:
-            if hasattr(item.raw_item, "function"):
-                func = item.raw_item.function
-                if hasattr(func, "name"):
-                    return func.name
+            if hasattr(item, "model_dump"):
+                data = item.model_dump()
+                if "function" in data and "name" in data["function"]:
+                    return data["function"]["name"]
         except Exception:
             pass
+
         return "unknown_tool"
+
 
     def _extract_tool_args(self, item) -> dict:
         """Extract tool arguments."""
@@ -533,18 +630,131 @@ class ProvenanceTraceHandler(ToolTraceHandler):
         with open(conv_file, "w") as f:
             f.write("\n".join(lines))
 
+    # def finalize(self) -> dict[str, Any]:
+    #     """Generate final summary and save outputs."""
+    #     if not self.enable_provenance or not self.event_logger:
+    #         return {}
+
+    #     # Save assistant response (legacy file for backwards compatibility)
+    #     full_response = ""
+    #     if self.assistant_buffer:
+    #         full_response = "".join(self.assistant_buffer)
+    #         response_file = self.output_dir / "assistant_full.md"
+    #         with open(response_file, "w") as f:
+    #             f.write(full_response)
+
+    #         self.event_logger.log(
+    #             "assistant_output",
+    #             {
+    #                 "length": len(full_response),
+    #                 "timestamp": datetime.now().isoformat(),
+    #                 "session_id": self.session_id,
+    #             },
+    #         )
+
+    #     # Add assistant response to conversation log (avoid duplicates)
+    #     if full_response:
+    #         # Check if response already exists in conversation log
+    #         has_response = any(
+    #             entry.get("type") == "response" and entry.get("role") == "assistant"
+    #             for entry in self.conversation_log
+    #         )
+    #         if not has_response:
+    #             self.conversation_log.append(
+    #                 {
+    #                     "role": "assistant",
+    #                     "content": full_response,
+    #                     "timestamp": datetime.now().isoformat(),
+    #                     "type": "response",
+    #                 }
+    #             )
+
+    #     # Save complete conversation log as markdown
+    #     self._save_conversation_log()
+
+    #     # Save conversation log as JSON for programmatic access
+    #     if self.conversation_log:
+    #         conv_json_file = self.output_dir / "conversation.json"
+    #         with open(conv_json_file, "w") as f:
+    #             json.dump(self.conversation_log, f, indent=2)
+
+    #     # Save materials catalog with enhanced metadata
+    #     self.materials_tracker.save_catalog(
+    #         self.output_dir / "materials_catalog.json", enhanced=True
+    #     )
+
+    #     # Generate summary
+    #     materials_summary = self.materials_tracker.get_summary()
+
+    #     # Tool statistics
+    #     mcp_tools = {}
+    #     for tc in self.tool_calls.values():
+    #         tool_name = tc.mcp_tool or tc.wrapper_name
+    #         if tool_name not in mcp_tools:
+    #             mcp_tools[tool_name] = {"count": 0, "total_ms": 0, "materials": 0}
+    #         mcp_tools[tool_name]["count"] += 1
+    #         mcp_tools[tool_name]["total_ms"] += tc.duration_ms
+    #         if tc.materials_extracted:
+    #             mcp_tools[tool_name]["materials"] += len(tc.materials_extracted)
+
+    #     # Calculate averages
+    #     for tool_stats in mcp_tools.values():
+    #         if tool_stats["count"] > 0:
+    #             tool_stats["avg_ms"] = tool_stats["total_ms"] / tool_stats["count"]
+
+    #     summary = {
+    #         "session_id": self.session_id,
+    #         "total_time_s": time.time() - self.run_start_time,
+    #         "ttfb_ms": (self.first_token_time - self.run_start_time) * 1000
+    #         if self.first_token_time
+    #         else None,
+    #         "tool_calls_total": len(self.tool_calls),
+    #         "materials_found": materials_summary["total_materials"],
+    #         "unique_compositions": materials_summary["unique_compositions"],
+    #         "mcp_operations": sum(1 for tc in self.tool_calls.values() if tc.mcp_tool),
+    #         "timestamp": datetime.now().isoformat(),
+    #         "mcp_tools": mcp_tools,
+    #         "materials_summary": {
+    #             "total": materials_summary["total_materials"],
+    #             "with_energy": materials_summary["materials_with_energy"],
+    #             "min_energy": materials_summary.get("min_energy"),
+    #             "max_energy": materials_summary.get("max_energy"),
+    #             "avg_energy": materials_summary.get("avg_energy"),
+    #         },
+    #     }
+
+    #     # Save summary
+    #     with open(self.output_dir / "summary.json", "w") as f:
+    #         json.dump(summary, f, indent=2)
+
+    #     # Log session end
+    #     self.event_logger.log_session_end(self.session_id, summary)
+
+    #     return summary
+
     def finalize(self) -> dict[str, Any]:
-        """Generate final summary and save outputs."""
+        """Generate final summary and save outputs (Runs only once)."""
+        # FIX: Check if already finalized to prevent duplicate events
+        if getattr(self, "_finalized", False):
+            return {}
+
         if not self.enable_provenance or not self.event_logger:
             return {}
+
+        # Mark as finalized immediately
+        self._finalized = True
 
         # Save assistant response (legacy file for backwards compatibility)
         full_response = ""
         if self.assistant_buffer:
             full_response = "".join(self.assistant_buffer)
-            response_file = self.output_dir / "assistant_full.md"
-            with open(response_file, "w") as f:
-                f.write(full_response)
+            if self.output_dir:
+                try:
+                    response_file = self.output_dir / "assistant_full.md"
+                    with open(response_file, "w") as f:
+                        f.write(full_response)
+                except Exception as e:
+                    logger.warning(f"Failed to save assistant output: {e}")
 
             self.event_logger.log(
                 "assistant_output",
@@ -573,18 +783,22 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                 )
 
         # Save complete conversation log as markdown
-        self._save_conversation_log()
+        if self.output_dir:
+            self._save_conversation_log()
 
-        # Save conversation log as JSON for programmatic access
-        if self.conversation_log:
-            conv_json_file = self.output_dir / "conversation.json"
-            with open(conv_json_file, "w") as f:
-                json.dump(self.conversation_log, f, indent=2)
+            # Save conversation log as JSON for programmatic access
+            if self.conversation_log:
+                try:
+                    conv_json_file = self.output_dir / "conversation.json"
+                    with open(conv_json_file, "w") as f:
+                        json.dump(self.conversation_log, f, indent=2)
+                except Exception:
+                    pass
 
-        # Save materials catalog with enhanced metadata
-        self.materials_tracker.save_catalog(
-            self.output_dir / "materials_catalog.json", enhanced=True
-        )
+            # Save materials catalog with enhanced metadata
+            self.materials_tracker.save_catalog(
+                self.output_dir / "materials_catalog.json", enhanced=True
+            )
 
         # Generate summary
         materials_summary = self.materials_tracker.get_summary()
@@ -627,8 +841,9 @@ class ProvenanceTraceHandler(ToolTraceHandler):
         }
 
         # Save summary
-        with open(self.output_dir / "summary.json", "w") as f:
-            json.dump(summary, f, indent=2)
+        if self.output_dir:
+            with open(self.output_dir / "summary.json", "w") as f:
+                json.dump(summary, f, indent=2)
 
         # Log session end
         self.event_logger.log_session_end(self.session_id, summary)

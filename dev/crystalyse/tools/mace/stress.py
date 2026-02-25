@@ -265,7 +265,7 @@ class MACEStressCalculator:
 
             # Get B' (pressure derivative) if available
             try:
-                b0_prime = eos.eos_parameters[3] if len(eos.eos_parameters) > 3 else None
+                b0_prime = eos.eos_parameters[2] if len(eos.eos_parameters) > 2 else None
             except Exception:
                 b0_prime = None
 

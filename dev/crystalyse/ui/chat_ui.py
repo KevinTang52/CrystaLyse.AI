@@ -416,6 +416,19 @@ class ChatExperience:
                     "[yellow]Warning: Query analysis failed, proceeding with original query.[/yellow]"
                 )
                 return self._create_enriched_query(raw_query, {}, analysis)
+            
+            # --- START FIX ---
+            # Automatically update the session mode if the analysis suggests a change
+            # (e.g., user asked for "rigorous", defaults were "adaptive")
+            if analysis.suggested_mode and analysis.suggested_mode.value != self.mode:
+                new_mode = analysis.suggested_mode.value
+                self.console.print(
+                    f"[dim]Dynamic Mode Switch: '{self.mode}' → '{new_mode}' based on query analysis.[/dim]"
+                )
+                self.mode = new_mode
+                self.refresh_agent()  # CRITICAL: Re-initializes agent with new mode
+            # --- END FIX ---
+
 
             self.console.print(
                 f"[dim]Query Analysis: {analysis.expertise_level} level, {analysis.specificity_score:.1%} specificity[/dim]"

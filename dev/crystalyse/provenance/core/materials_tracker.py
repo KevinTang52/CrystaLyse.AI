@@ -68,37 +68,58 @@ class MaterialsTracker:
         # Store orphaned energy data when composition is unknown
         self._orphaned_energy_data = None
 
+    # def _normalize_composition(self, composition: str) -> str:
+    #     """
+    #     Normalize composition string to handle different element orderings.
+    #     E.g., "LiCoO2" and "CoLiO2" both become "CoLiO2" (alphabetical order).
+    #     """
+    #     import re
+
+    #     # Parse elements and their counts from the formula
+    #     elements = {}
+    #     # Match element symbols followed by optional numbers
+    #     pattern = r"([A-Z][a-z]?)(\d*)"
+    #     matches = re.findall(pattern, composition)
+
+    #     for element, count in matches:
+    #         count = int(count) if count else 1
+    #         if element in elements:
+    #             elements[element] += count
+    #         else:
+    #             elements[element] = count
+
+    #     # Rebuild formula in alphabetical order
+    #     sorted_elements = sorted(elements.keys())
+    #     normalized = ""
+    #     for element in sorted_elements:
+    #         count = elements[element]
+    #         if count == 1:
+    #             normalized += element
+    #         else:
+    #             normalized += f"{element}{count}"
+
+    #     return normalized
+
     def _normalize_composition(self, composition: str) -> str:
         """
-        Normalize composition string to handle different element orderings.
-        E.g., "LiCoO2" and "CoLiO2" both become "CoLiO2" (alphabetical order).
+        Normalize composition to standard chemical notation (Hill).
+        Uses pymatgen if available, otherwise falls back to alphabetical.
         """
-        import re
+        try:
+            from pymatgen.core import Composition
+            # This ensures 'SiC' stays 'SiC' instead of becoming 'CSi'
+            return Composition(composition).reduced_formula
+        except ImportError:
+            # Fallback for environments without pymatgen
+            import re
+            elements = {}
+            pattern = r"([A-Z][a-z]?)(\d*)"
+            for element, count in re.findall(pattern, composition):
+                count = int(count) if count else 1
+                elements[element] = elements.get(element, 0) + count
+            
+            return "".join(f"{k}{v if v>1 else ''}" for k, v in sorted(elements.items()))
 
-        # Parse elements and their counts from the formula
-        elements = {}
-        # Match element symbols followed by optional numbers
-        pattern = r"([A-Z][a-z]?)(\d*)"
-        matches = re.findall(pattern, composition)
-
-        for element, count in matches:
-            count = int(count) if count else 1
-            if element in elements:
-                elements[element] += count
-            else:
-                elements[element] = count
-
-        # Rebuild formula in alphabetical order
-        sorted_elements = sorted(elements.keys())
-        normalized = ""
-        for element in sorted_elements:
-            count = elements[element]
-            if count == 1:
-                normalized += element
-            else:
-                normalized += f"{element}{count}"
-
-        return normalized
 
     def extract_from_output(self, output: Any, tool_name: str | None = None) -> list[Material]:
         """
@@ -143,6 +164,8 @@ class MaterialsTracker:
                 materials = self._extract_from_phase15_band_gap(data)
             elif tool_name == "calculate_stress":
                 materials = self._extract_from_phase15_stress(data)
+            elif tool_name == "relax_structure":
+                materials = self._extract_from_phase15_relaxation(data)
             elif tool_name == "fit_equation_of_state":
                 materials = self._extract_from_phase15_eos(data)
 
@@ -330,6 +353,8 @@ class MaterialsTracker:
 
         return materials
 
+
+
     def _extract_from_mace(self, data: dict) -> list[Material]:
         """Extract from MACE energy calculation."""
         materials = []
@@ -465,22 +490,45 @@ class MaterialsTracker:
             materials.append(material)
         return materials
 
+    # def _extract_from_phase15_space_group(self, data: dict) -> list[Material]:
+    #     """Extract from Phase 1.5 space group analysis."""
+    #     materials = []
+    #     if "space_group" in data:
+    #         material = Material(
+    #             composition=data.get("composition", "unknown"),
+    #             space_group=data["space_group"],
+    #             lattice_params={
+    #                 "crystal_system": data.get("crystal_system"),
+    #                 "point_group": data.get("point_group"),
+    #                 "number": data.get("number"),
+    #             },
+    #             method="pymatgen_symmetry",
+    #         )
+    #         materials.append(material)
+    #     return materials
+
     def _extract_from_phase15_space_group(self, data: dict) -> list[Material]:
         """Extract from Phase 1.5 space group analysis."""
         materials = []
-        if "space_group" in data:
+        # FIX: Look for 'space_group_symbol' (what the tool actually outputs)
+        # instead of just 'space_group'.
+        sg_symbol = data.get("space_group_symbol") or data.get("space_group")
+        
+        if sg_symbol:
             material = Material(
                 composition=data.get("composition", "unknown"),
-                space_group=data["space_group"],
+                space_group=sg_symbol,
                 lattice_params={
                     "crystal_system": data.get("crystal_system"),
                     "point_group": data.get("point_group"),
-                    "number": data.get("number"),
+                    "number": data.get("space_group_number") or data.get("number"),
                 },
                 method="pymatgen_symmetry",
             )
             materials.append(material)
         return materials
+
+
 
     def _extract_from_phase15_dopants(self, data: dict) -> list[Material]:
         """Extract from Phase 1.5 dopant prediction."""
@@ -522,17 +570,76 @@ class MaterialsTracker:
             materials.append(material)
         return materials
 
-    def _extract_from_phase15_eos(self, data: dict) -> list[Material]:
-        """Extract from Phase 1.5 EOS fitting."""
+    # def _extract_from_phase15_eos(self, data: dict) -> list[Material]:
+    #     """Extract from Phase 1.5 EOS fitting."""
+    #     materials = []
+    #     if "bulk_modulus" in data:
+    #         material = Material(
+    #             composition=data.get("composition", "unknown"),
+    #             bulk_modulus=data["bulk_modulus"],
+    #             method="mace_eos",
+    #         )
+    #         materials.append(material)
+    #     return materials
+
+    # Phase 1.5 extraction methods
+    
+    # ... (keep other phase 1.5 methods like dopants/band gap) ...
+
+    # 1. ADD THIS NEW FUNCTION
+    def _extract_from_phase15_relaxation(self, data: dict) -> list[Material]:
+        """Extract from Phase 1.5 structure relaxation (with Auto-Formula detection)."""
         materials = []
-        if "bulk_modulus" in data:
+        if "final_energy" in data or "relaxed_structure" in data:
+            # 1. Try to find the formula string directly
+            composition = data.get("formula") or data.get("composition")
+            
+            # 2. If missing, check inside the structure dictionary
+            if not composition and "relaxed_structure" in data:
+                struct = data["relaxed_structure"]
+                composition = struct.get("formula") or struct.get("composition")
+                
+                # 3. FIX: If STILL missing, derive formula from atomic numbers (e.g., [6, 14] -> SiC)
+                if not composition and "numbers" in struct:
+                    try:
+                        from pymatgen.core import Composition
+                        # Converts list of atomic numbers into a standardized formula
+                        composition = Composition.from_dict(
+                            {n: struct["numbers"].count(n) for n in set(struct["numbers"])}
+                        ).reduced_formula
+                    except Exception:
+                        composition = "unknown"
+
             material = Material(
-                composition=data.get("composition", "unknown"),
-                bulk_modulus=data["bulk_modulus"],
-                method="mace_eos",
+                composition=composition or "unknown",
+                formula=composition,
+                formation_energy=data.get("final_energy"),
+                method="mace_relaxation",
+                is_stable=True,
+                confidence=1.0
             )
             materials.append(material)
         return materials
+
+    # 2. REPLACE THE OLD VERSION WITH THIS ONE
+    def _extract_from_phase15_eos(self, data: dict) -> list[Material]:
+        """Extract from Phase 1.5 EOS fitting."""
+        materials = []
+        if "bulk_modulus" in data or "b0" in data:
+            # Captures energy from the EOS equilibrium point
+            energy = data.get("e0") or data.get("equilibrium_energy")
+            
+            material = Material(
+                composition=data.get("composition") or data.get("formula", "unknown"),
+                formula=data.get("formula"),
+                bulk_modulus=data.get("bulk_modulus") or data.get("b0"),
+                formation_energy=energy,
+                method="mace_eos",
+                confidence=1.0
+            )
+            materials.append(material)
+        return materials
+
 
     # Additional SMACT extraction methods for Phase 1.5
     def _extract_from_smact_validate_fast(self, data: dict) -> list[Material]:
