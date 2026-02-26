@@ -105,7 +105,7 @@ class CrystaLyseProvenanceHandler(ProvenanceTraceHandler):
                 session_id=session_id,
                 enable_provenance=True,  # Always enabled
                 enable_visual=config.provenance["visual_trace"],
-                capture_mcp_logs=config.provenance["capture_mcp_logs"],
+                capture_mcp_logs=True, #config.provenance["capture_mcp_logs"],
                 save_raw_outputs=config.provenance["capture_raw"],
                 **kwargs,
             )
@@ -172,31 +172,66 @@ class CrystaLyseProvenanceHandler(ProvenanceTraceHandler):
             "events_file": str(self.get_events_path()) if self.get_events_path() else None,
         }
 
+    # def finalize(self) -> dict:
+    #     """
+    #     Finalise provenance capture and return summary.
+
+    #     Overrides parent method to add graceful error handling.
+
+    #     Returns:
+    #         Summary dictionary with provenance statistics
+    #     """
+    #     try:
+    #         summary = super().finalize()
+
+    #         # Add CrystaLyse-specific metadata
+    #         if summary:
+    #             summary["mode"] = self.mode
+    #             summary["session_info"] = self.get_session_info()
+    #             # Add output_dir at top level for easier access
+    #             if hasattr(self, "output_dir") and self.output_dir:
+    #                 summary["output_dir"] = str(self.output_dir)
+
+    #         logger.info(f"Provenance finalised: {self.session_id}")
+    #         return summary
+    #     except Exception as e:
+    #         logger.error(f"Error finalising provenance: {e}")
+    #         # Return minimal summary on error
+    #         return {"session_id": self.session_id, "mode": self.mode, "error": str(e)}
+
+
     def finalize(self) -> dict:
-        """
-        Finalise provenance capture and return summary.
-
-        Overrides parent method to add graceful error handling.
-
-        Returns:
-            Summary dictionary with provenance statistics
-        """
         try:
-            summary = super().finalize()
+            summary = super().finalize() or {}
 
-            # Add CrystaLyse-specific metadata
-            if summary:
-                summary["mode"] = self.mode
-                summary["session_info"] = self.get_session_info()
-                # Add output_dir at top level for easier access
-                if hasattr(self, "output_dir") and self.output_dir:
-                    summary["output_dir"] = str(self.output_dir)
+            # Add CrystaLyse metadata
+            summary["mode"] = self.mode
+            summary["session_id"] = self.session_id
+            summary["session_info"] = self.get_session_info()
 
-            logger.info(f"Provenance finalised: {self.session_id}")
+            # Count from self.tool_calls (the real attribute)
+            if hasattr(self, "tool_calls") and self.tool_calls:
+                total_calls = len(self.tool_calls)
+                summary["tool_calls_total"] = total_calls
+                summary["mcp_operations"] = total_calls
+
+                # Deduplicate materials by formula
+                seen_formulas = set()
+                for call in self.tool_calls.values():
+                    if hasattr(call, "materials_extracted") and call.materials_extracted:
+                        for material in call.materials_extracted:
+                            formula = getattr(material, "formula", None) or getattr(material, "composition", None)
+                            if formula:
+                                seen_formulas.add(formula)
+                
+                summary["materials_found"] = len(seen_formulas)
+
+            if hasattr(self, "output_dir") and self.output_dir:
+                summary["output_dir"] = str(self.output_dir)
+
             return summary
+
         except Exception as e:
-            logger.error(f"Error finalising provenance: {e}")
-            # Return minimal summary on error
             return {"session_id": self.session_id, "mode": self.mode, "error": str(e)}
 
 

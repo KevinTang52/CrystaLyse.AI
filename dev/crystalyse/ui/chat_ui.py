@@ -365,7 +365,7 @@ class ChatExperience:
                     if PROVENANCE_AVAILABLE and self.provenance_handler:
                         try:
                             summary = self.provenance_handler.finalize()
-                            if summary and self.config.provenance.get("show_summary", True):
+                            if summary: # and self.config.provenance.get("show_summary", True):
                                 self._display_provenance_summary(summary)
                         except Exception as e:
                             self.console.print(
@@ -416,7 +416,7 @@ class ChatExperience:
                     "[yellow]Warning: Query analysis failed, proceeding with original query.[/yellow]"
                 )
                 return self._create_enriched_query(raw_query, {}, analysis)
-            
+
             # --- START FIX ---
             # Automatically update the session mode if the analysis suggests a change
             # (e.g., user asked for "rigorous", defaults were "adaptive")
@@ -428,6 +428,7 @@ class ChatExperience:
                 self.mode = new_mode
                 self.refresh_agent()  # CRITICAL: Re-initializes agent with new mode
             # --- END FIX ---
+
 
 
             self.console.print(
