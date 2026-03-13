@@ -154,6 +154,8 @@ class MaterialsTracker:
                 materials = self._extract_from_phase15_mace_energy(data)
             elif tool_name == "generate_crystal_csp":
                 materials = self._extract_from_phase15_chemeleon(data)
+            elif tool_name == "screen_structures":
+                materials = self._extract_from_screen_structures(data)
             elif tool_name == "calculate_energy_above_hull":
                 materials = self._extract_from_phase15_pymatgen_hull(data)
             elif tool_name == "analyze_space_group":
@@ -583,10 +585,27 @@ class MaterialsTracker:
     #     return materials
 
     # Phase 1.5 extraction methods
-    
-    # ... (keep other phase 1.5 methods like dopants/band gap) ...
 
-    # 1. ADD THIS NEW FUNCTION
+    def _extract_from_screen_structures(self, data: dict) -> list[Material]:
+        """Extract ranked candidates from screen_structures output."""
+        materials = []
+        ranked = data.get("ranked_structures", [])
+        formula = data.get("formula", "unknown")
+        for entry in ranked:
+            if not isinstance(entry, dict):
+                continue
+            composition = entry.get("formula") or formula
+            energy = entry.get("single_point_energy_ev")
+            material = Material(
+                composition=composition,
+                formula=composition,
+                formation_energy=energy,
+                method="mace_single_point_screened",
+                confidence=0.8,  # lower confidence — not relaxed
+            )
+            materials.append(material)
+        return materials
+
     def _extract_from_phase15_relaxation(self, data: dict) -> list[Material]:
         """Extract from Phase 1.5 structure relaxation (with Auto-Formula detection)."""
         materials = []

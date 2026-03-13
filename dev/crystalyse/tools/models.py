@@ -25,6 +25,30 @@ class MaterialProperty(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, default=1.0)
 
 
+class RankedStructure(BaseModel):
+    """A single candidate structure with its screening energy."""
+
+    rank: int
+    formula: str
+    structure: dict  # raw structure dict (numbers/positions/cell/pbc)
+    single_point_energy_ev: float
+    energy_per_atom_ev: float
+    num_atoms: int
+
+
+class ScreeningResult(BaseModel):
+    """Result from screen_structures — ranked candidates ready for selective relaxation."""
+
+    success: bool = True
+    formula: str
+    total_screened: int
+    kept: int
+    keep_top_k: int
+    ranked_structures: list[RankedStructure] = Field(default_factory=list)
+    screening_method: str = "mace_single_point"
+    error: str | None = None
+
+
 # Import specific models from each module
 from .chemeleon.predictor import CrystalStructure, PredictionResult
 from .mace.energy import EnergyResult, RelaxationResult
@@ -45,6 +69,8 @@ from .visualization.visualizer import VisualizationResult
 __all__ = [
     "ToolResult",
     "MaterialProperty",
+    "RankedStructure",
+    "ScreeningResult",
     "ValidationResult",
     "StabilityResult",
     "BandGapResult",

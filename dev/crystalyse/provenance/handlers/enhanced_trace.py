@@ -18,6 +18,68 @@ from ..core.pydantic_serializer import create_enhanced_material_record, serializ
 from ..value_registry import get_global_registry
 
 
+import re as _re
+
+# Scientific keywords that are worth capturing when the agent mentions them
+_SCIENTIFIC_KEYWORDS = [
+    # Models / force fields
+    "MACE-MP", "MACE-OFF", "MACE", "CHGNet", "M3GNet", "SevenNet",
+    # Optimisers
+    "BFGS", "L-BFGS", "LBFGS", "FIRE",
+    # EOS types
+    "Birch-Murnaghan", "BirchMurnaghan", "Murnaghan", "Vinet",
+    # Symmetry / structure labels
+    "Fm-3m", "Pm-3m", "P63/mmc", "R-3c", "Pnma", "P21/c", "Fd-3m",
+    # Methods
+    "DFT", "GGA", "PBE", "MP-compatible",
+]
+# Build a single case-sensitive regex that matches any of them as whole tokens
+_KW_PATTERN = _re.compile(
+    r"(?<![A-Za-z0-9/-])(" + "|".join(_re.escape(k) for k in _SCIENTIFIC_KEYWORDS) + r")(?![A-Za-z0-9/-])"
+)
+# Regex to find numbers, optionally with sign/exponent, followed by optional unit
+_NUM_PATTERN = _re.compile(
+    r"([-+]?\d+\.?\d*(?:[eE][-+]?\d+)?)"  # number
+    r"(?:\s*([eVÅGPaJ/atoms\w°]+))?",      # optional unit
+    _re.UNICODE,
+)
+_CONTEXT_WINDOW = 40  # chars on each side of the number to include as context
+
+
+def _extract_response_values(text: str) -> dict:
+    """
+    Scan assistant response text and return:
+      - numbers: list of {value, unit, context} for every number mentioned
+      - keywords: list of scientific method/model names mentioned
+    """
+    numbers = []
+    seen_spans: list[tuple[int, int]] = []
+
+    for m in _NUM_PATTERN.finditer(text):
+        start, end = m.span()
+        # Avoid overlapping matches
+        if any(s <= start < e for s, e in seen_spans):
+            continue
+        seen_spans.append((start, end))
+
+        raw_val = m.group(1)
+        unit = (m.group(2) or "").strip()
+
+        # Skip plain integers that are just list indices / markdown (e.g. "1.", "2.")
+        if unit in ("", ".") and "." not in raw_val and abs(int(float(raw_val))) < 10:
+            continue
+
+        ctx_start = max(0, start - _CONTEXT_WINDOW)
+        ctx_end = min(len(text), end + _CONTEXT_WINDOW)
+        context = text[ctx_start:ctx_end].replace("\n", " ").strip()
+
+        numbers.append({"value": raw_val, "unit": unit, "context": context})
+
+    keywords = list(dict.fromkeys(m.group(1) for m in _KW_PATTERN.finditer(text)))
+
+    return {"numbers": numbers, "keywords": keywords}
+
+
 # Base class for trace handling (using duck typing to avoid circular import)
 class ToolTraceHandler:
     """Minimal base class for trace handling (duck typing interface)."""
@@ -202,10 +264,15 @@ class ProvenanceTraceHandler(ToolTraceHandler):
         )
         self.tool_calls[call_id] = tool_call
 
-        # Log event
+        # Log event — include input args so input numerics (fmax, steps, etc.) are traceable
         self.event_logger.log(
             "tool_start",
-            {"wrapper": wrapper_name, "call_id": call_id, "timestamp": datetime.now().isoformat()},
+            {
+                "wrapper": wrapper_name,
+                "call_id": call_id,
+                "args": args,
+                "timestamp": datetime.now().isoformat(),
+            },
         )
 
     def _on_tool_call_end(self, item):
@@ -257,6 +324,9 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                 # 3. Check for Symmetry/Space Group analysis
                 elif "space_group_symbol" in output_data:
                     mcp_tool = "analyze_space_group"
+                # 4. Check for structure screening results
+                elif "ranked_structures" in output_data and "total_screened" in output_data:
+                    mcp_tool = "screen_structures"
                 else:
                     # Fallback to existing detector if no specific keys are found
                     mcp_tool = self.mcp_detector.detect_tool(serialized_output)
@@ -354,6 +424,20 @@ class ProvenanceTraceHandler(ToolTraceHandler):
             text = ItemHelpers.text_message_output(item)
             if text:
                 self.assistant_buffer.append(text)
+                # Log every number and scientific keyword mentioned in this response chunk
+                try:
+                    values = _extract_response_values(text)
+                    if self.event_logger and (values["numbers"] or values["keywords"]):
+                        self.event_logger.log(
+                            "response_values",
+                            {
+                                "numbers": values["numbers"],
+                                "keywords": values["keywords"],
+                                "timestamp": datetime.now().isoformat(),
+                            },
+                        )
+                except Exception:
+                    pass
         except Exception:
             pass
 

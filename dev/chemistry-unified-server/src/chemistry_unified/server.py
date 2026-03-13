@@ -10,7 +10,11 @@ Total Tools: 20 MCP endpoints
 """
 
 import itertools
+import os
+import tempfile
 import smact
+from datetime import datetime
+from pathlib import Path
 from pymatgen.core import Composition
 
 
@@ -41,6 +45,8 @@ from crystalyse.tools.models import (
     FoundationModelListResult,
     MLRepresentationResult,
     PredictionResult,
+    RankedStructure,
+    ScreeningResult,
     SpaceGroupResult,
     StabilityResult,
     StressResult,
@@ -101,6 +107,113 @@ def make_json_serializable(obj: Any) -> Any:
             return str(obj)
         except Exception:
             return f"<non-serializable: {type(obj).__name__}>"
+
+
+_MODE_NUM_SAMPLES = {
+    "creative": 10,  # Wide coverage of polymorphs / diffusion distribution
+    "adaptive": 5,   # Enough to catch obvious polymorphs without excessive cost
+    "rigorous": 5,   # Thorough — screen 5, relax the best, analyse all survivors
+}
+
+# How many formula units to expand the input formula to before generation.
+# creative: minimal cell (1 f.u.) — fast, maximises diversity across samples
+# adaptive: 1 f.u. — default
+# rigorous: 4 f.u. — captures octahedral tilting, Jahn-Teller distortions, and
+#           symmetry lowering (e.g. ABX3 → A4B4X12, 20 atoms) that are invisible
+#           in the minimal cell.
+_MODE_FORMULA_UNITS = {
+    "creative": 1,
+    "adaptive": 1,
+    "rigorous": 4,
+}
+
+
+def _default_num_samples() -> int:
+    """Return the mode-appropriate default for Chemeleon num_samples."""
+    mode = os.environ.get("CRYSTALYSE_MODE", "adaptive").lower()
+    return _MODE_NUM_SAMPLES.get(mode, 1)
+
+
+def _default_formula_units() -> int:
+    """Return the mode-appropriate formula-unit multiplier for Chemeleon generation."""
+    mode = os.environ.get("CRYSTALYSE_MODE", "adaptive").lower()
+    return _MODE_FORMULA_UNITS.get(mode, 1)
+
+
+def _expand_formula(formula: str, formula_units: int) -> str:
+    """
+    Multiply a formula by formula_units and return the expanded string.
+
+    Examples:
+        _expand_formula("SrTiO3", 4)  -> "Sr4Ti4O12"
+        _expand_formula("LiCoO2", 1)  -> "LiCoO2"
+    """
+    if formula_units <= 1:
+        return formula
+    expanded = Composition(formula) * formula_units
+    # Format without spaces: "Sr4 Ti4 O12" -> "Sr4Ti4O12"
+    return expanded.formula.replace(" ", "")
+
+
+def _get_cif_output_dir() -> str:
+    """
+    Resolve the CIF output directory for the current session.
+
+    Resolution order:
+    1. CRYSTALYSE_SESSION_OUTPUT_DIR env var — set by the UI to the exact session run dir
+    2. Latest modified dir under CRYSTALYSE_PROVENANCE_DIR/runs/ — picked up automatically
+    3. ./relaxed_structures — safe fallback
+    """
+    # 1. Explicit session dir set by UI
+    explicit = os.environ.get("CRYSTALYSE_SESSION_OUTPUT_DIR")
+    if explicit:
+        return explicit
+
+    # 2. Find the latest run dir under provenance base
+    base = Path(os.environ.get("CRYSTALYSE_PROVENANCE_DIR", "./provenance_output"))
+    runs_dir = base / "runs"
+    if runs_dir.is_dir():
+        run_dirs = [d for d in runs_dir.iterdir() if d.is_dir()]
+        if run_dirs:
+            latest = max(run_dirs, key=lambda d: d.stat().st_mtime)
+            return str(latest)
+
+    # 3. Fallback
+    return str(Path.cwd() / "relaxed_structures")
+
+
+def _structure_dict_to_cif_string(structure_dict: dict[str, Any]) -> str:
+    """Convert a structure dict (numbers/positions/cell/pbc) to a CIF string via ASE."""
+    try:
+        from ase import Atoms
+        from ase.io import write as ase_write
+
+        numbers = structure_dict["numbers"]
+        positions = structure_dict["positions"]
+        cell = structure_dict["cell"]
+        pbc = structure_dict.get("pbc", [True, True, True])
+
+        if isinstance(numbers, np.ndarray):
+            numbers = numbers.tolist()
+        if isinstance(positions, np.ndarray):
+            positions = positions.tolist()
+        if isinstance(cell, np.ndarray):
+            cell = cell.tolist()
+
+        atoms = Atoms(numbers=numbers, positions=positions, cell=cell, pbc=pbc)
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cif", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            ase_write(tmp_path, atoms, format="cif")
+            with open(tmp_path, encoding="utf-8") as f:
+                return f.read()
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+    except Exception as e:
+        logger.error(f"Failed to convert structure dict to CIF: {e}")
+        return ""
 
 
 # ===================================================================
@@ -255,48 +368,198 @@ def predict_band_gap(composition: str) -> BandGapResult:
     description="Generate crystal structure for a composition - Use AFTER validation to predict the most likely crystal structure and space group"
 )
 async def generate_crystal_csp(
-    formulas: str | list[str], num_samples: int = 1, prefer_gpu: bool = True
+    formulas: str | list[str],
+    num_samples: int = 1,
+    formula_units: int | None = None,
+    prefer_gpu: bool = True,
 ) -> PredictionResult:
     """
     Generate crystal structures using Chemeleon diffusion model (CSP - Crystal Structure Prediction).
 
     Args:
         formulas: Chemical formula(s) to generate structures for (e.g., "LiCoO2", ["Na2SO4", "CaTiO3"])
-        num_samples: Number of structures to generate per formula (default: 1)
+        num_samples: Number of structures to generate per formula (default: mode-dependent)
+        formula_units: Number of formula units in the generated cell.
+            Use 1 for minimal cell (e.g. ABX3 → 5 atoms).
+            Use 4 for expanded cell (e.g. ABX3 → A4B4X12, 20 atoms) — enables octahedral
+            tilting, Jahn-Teller distortions, and other symmetry-lowering that are invisible
+            in the minimal cell. Defaults to mode-dependent value (rigorous=4, others=1).
         prefer_gpu: If True, use GPU if available (default: True)
 
     Returns:
-        PredictionResult with:
-            - success: bool
-            - formula: str
-            - predicted_structures: List of structures, each with:
-                * numbers: List[int] - atomic numbers
-                * positions: List[List[float]] - 3D Cartesian coordinates
-                * cell: List[List[float]] - 3x3 lattice matrix
-                * symbols: List[str] - element symbols
-                * volume: float - cell volume
-                * formula: str - reduced formula
-                * confidence: float (0-1)
-            - computation_time: float
-            - method: "chemeleon"
-
-        NOTE: Each structure in predicted_structures can be passed directly to calculate_formation_energy
-        or relax_structure tools by extracting the required fields (numbers, positions, cell).
+        PredictionResult with predicted_structures list.
+        NOTE: formula_units_used is included in the result so downstream tools know
+        the cell size.
     """
     if isinstance(formulas, str):
         formulas_list = [formulas]
     else:
         formulas_list = formulas
 
-    logger.info(f"Generating structures for: {formulas_list}")
+    # Apply mode-appropriate defaults if caller left them at sentinel values
+    if num_samples == 1:
+        num_samples = _default_num_samples()
+    if formula_units is None:
+        formula_units = _default_formula_units()
 
-    # For simplicity, process first formula
     formula = formulas_list[0]
-    result = await chemeleon_predictor.predict_structure(
-        formula=formula, num_samples=num_samples, prefer_gpu=prefer_gpu
+    generation_formula = _expand_formula(formula, formula_units)
+
+    if generation_formula != formula:
+        logger.info(
+            f"Expanding formula {formula} → {generation_formula} "
+            f"({formula_units} f.u.) for rigorous-mode generation"
+        )
+
+    logger.info(
+        f"Generating structures for: {generation_formula} "
+        f"(num_samples={num_samples}, formula_units={formula_units})"
     )
 
-    return result
+    result = await chemeleon_predictor.predict_structure(
+        formula=generation_formula, num_samples=num_samples, prefer_gpu=prefer_gpu
+    )
+
+    # Attach the expansion metadata so the agent can report it correctly
+    result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+    result_dict["formula_units_used"] = formula_units
+    result_dict["original_formula"] = formula
+    result_dict["generation_formula"] = generation_formula
+
+    return result_dict
+
+
+@mcp.tool(
+    description=(
+        "Screen and rank Chemeleon-predicted structures by single-point MACE energy — "
+        "run this AFTER generate_crystal_csp and BEFORE relax_structure to avoid relaxing "
+        "every candidate. Returns top-K structures sorted lowest energy first."
+    )
+)
+async def screen_structures(
+    structures: list[dict[str, Any]],
+    formula: str,
+    keep_top_k: int = 3,
+    model_type: str = "mace_mp",
+    size: str = "medium",
+) -> ScreeningResult:
+    """
+    Rank candidate structures by single-point MACE energy and return the top-K.
+
+    Single-point energy (no relaxation) is orders of magnitude faster than a full
+    BFGS relaxation and gives a reliable relative ranking within the same composition.
+    Use this to down-select a large Chemeleon batch before the expensive relaxation step.
+
+    Typical workflow:
+        1. generate_crystal_csp(formula, num_samples=10)  → many candidates
+        2. screen_structures(candidates, formula, keep_top_k=3)  → top 3 by energy
+        3. relax_structure(top_candidate)  → full relaxation on each survivor
+        4. analyze_space_group + calculate_energy_above_hull on relaxed structures
+
+    Args:
+        structures: List of structure dicts from generate_crystal_csp
+                    (each with 'numbers', 'positions', 'cell', and optionally 'pbc')
+        formula: Chemical formula shared by all structures (e.g. "TiO2")
+        keep_top_k: How many lowest-energy structures to keep (default 3)
+        model_type: MACE model type ('mace_mp' or 'mace_off')
+        size: Model size ('small', 'medium', 'large')
+
+    Returns:
+        ScreeningResult with ranked_structures sorted lowest energy first,
+        truncated to keep_top_k. Each entry carries the structure dict ready
+        to pass directly to relax_structure.
+    """
+    logger.info(
+        f"Screening {len(structures)} candidates for {formula}, keeping top {keep_top_k}"
+    )
+
+    if not structures:
+        return ScreeningResult(
+            success=False,
+            formula=formula,
+            total_screened=0,
+            kept=0,
+            keep_top_k=keep_top_k,
+            error="No structures provided",
+        )
+
+    try:
+        calc = mace_calculator  # reuse the global MACECalculator instance
+
+        scored: list[tuple[float, int, dict]] = []  # (energy, original_index, structure)
+
+        for idx, struct in enumerate(structures):
+            # Extract only the fields calculate_formation_energy needs
+            raw = {
+                "numbers": struct.get("numbers", []),
+                "positions": struct.get("positions", []),
+                "cell": struct.get("cell", []),
+                "pbc": struct.get("pbc", [True, True, True]),
+            }
+            energy_result = await calc.calculate_formation_energy(raw)
+            if energy_result.success and energy_result.total_energy is not None:
+                scored.append((energy_result.total_energy, idx, struct))
+                logger.info(
+                    f"  [{idx+1}/{len(structures)}] {formula}: "
+                    f"E = {energy_result.total_energy:.4f} eV"
+                )
+            else:
+                logger.warning(
+                    f"  [{idx+1}/{len(structures)}] {formula}: single-point failed — {energy_result.error}"
+                )
+
+        if not scored:
+            return ScreeningResult(
+                success=False,
+                formula=formula,
+                total_screened=len(structures),
+                kept=0,
+                keep_top_k=keep_top_k,
+                error="All single-point calculations failed",
+            )
+
+        # Sort lowest energy first (most stable)
+        scored.sort(key=lambda x: x[0])
+        top = scored[:keep_top_k]
+
+        ranked = []
+        for rank, (total_e, orig_idx, struct) in enumerate(top, start=1):
+            n_atoms = len(struct.get("numbers", [1]))
+            ranked.append(
+                RankedStructure(
+                    rank=rank,
+                    formula=formula,
+                    structure=struct,
+                    single_point_energy_ev=total_e,
+                    energy_per_atom_ev=total_e / max(n_atoms, 1),
+                    num_atoms=n_atoms,
+                )
+            )
+
+        logger.info(
+            f"Screening complete: {len(scored)}/{len(structures)} scored, "
+            f"kept top {len(ranked)}"
+        )
+
+        return ScreeningResult(
+            success=True,
+            formula=formula,
+            total_screened=len(structures),
+            kept=len(ranked),
+            keep_top_k=keep_top_k,
+            ranked_structures=ranked,
+        )
+
+    except Exception as e:
+        logger.error(f"screen_structures failed: {e}")
+        return ScreeningResult(
+            success=False,
+            formula=formula,
+            total_screened=len(structures),
+            kept=0,
+            keep_top_k=keep_top_k,
+            error=str(e),
+        )
 
 
 # ===================================================================
@@ -370,7 +633,50 @@ async def relax_structure(
     result = await mace_calculator.relax_structure(
         structure=normalized_structure, fmax=fmax, steps=steps, optimizer=optimizer
     )
-    return result.dict()
+    result_dict = result.model_dump()
+
+    # Auto-export CIF of the relaxed structure so the user can download it
+    if result.success and result.relaxed_structure:
+        cif_content = _structure_dict_to_cif_string(result.relaxed_structure)
+        if cif_content:
+            try:
+                formula = structure_dict.get("formula") or structure_dict.get("symbols", ["unknown"])[0]
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_dir = _get_cif_output_dir()
+                vis_result = visualizer.save_cif_file(
+                    cif_content=cif_content,
+                    formula=formula,
+                    output_dir=output_dir,
+                    title=f"Relaxed {formula} ({timestamp})",
+                )
+                result_dict["cif_content"] = cif_content
+                result_dict["cif_file_path"] = vis_result.output_path or output_dir
+                logger.info(f"Auto-exported relaxed CIF for {formula} to {vis_result.output_path}")
+            except Exception as e:
+                logger.warning(f"CIF auto-export failed: {e}")
+                result_dict["cif_content"] = cif_content
+
+            # Run space group analysis on the relaxed structure
+            try:
+                sg_result = analyze_space_group(structure_input=cif_content)
+                result_dict["space_group"] = sg_result.model_dump() if hasattr(sg_result, "model_dump") else sg_result.dict()
+                logger.info(f"Space group analysis complete: {result_dict['space_group'].get('space_group_symbol', '?')}")
+            except Exception as e:
+                logger.warning(f"Post-relaxation space group analysis failed: {e}")
+
+            # Calculate energy above hull using the final energy from relaxation
+            if result.final_energy is not None:
+                try:
+                    hull_result = calculate_energy_above_hull(
+                        composition=formula,
+                        total_energy=result.final_energy,
+                    )
+                    result_dict["energy_above_hull"] = hull_result.model_dump() if hasattr(hull_result, "model_dump") else hull_result.dict()
+                    logger.info(f"Energy above hull: {result_dict['energy_above_hull'].get('energy_above_hull', '?')} eV/atom")
+                except Exception as e:
+                    logger.warning(f"Post-relaxation energy above hull failed: {e}")
+
+    return result_dict
 
 
 # ===================================================================
@@ -700,7 +1006,16 @@ def fit_equation_of_state(
         model_type=model_type,
         size=size,
     )
-    return result
+    result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+
+    # Build a markdown E-V table so the agent includes it verbatim in its response
+    if result.success and result.volumes and result.energies:
+        rows = ["| V (Å³) | E (eV) |", "|--------|--------|"]
+        for v, e in zip(result.volumes, result.energies):
+            rows.append(f"| {v:.4f} | {e:.6f} |")
+        result_dict["ev_table"] = "\n".join(rows)
+
+    return result_dict
 
 
 # ===================================================================
@@ -741,7 +1056,7 @@ def get_server_info() -> dict[str, Any]:
         "path_manipulation": False,
         "structured_output": True,
         "error_handling": True,
-        "total_tools": 20,
+        "total_tools": 21,
         "tool_categories": {
             "smact": {
                 "enabled": True,
@@ -755,7 +1070,7 @@ def get_server_info() -> dict[str, Any]:
                     "predict_dopants",
                 ],
             },
-            "chemeleon": {"enabled": True, "tools": ["generate_crystal_csp"]},
+            "chemeleon": {"enabled": True, "tools": ["generate_crystal_csp", "screen_structures"]},
             "mace": {
                 "enabled": True,
                 "tools": [

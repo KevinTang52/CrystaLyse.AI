@@ -91,7 +91,10 @@ class MCPDetector:
         # REMOVED "success" and "formula" to prevent EOS confusion
         "generate_crystal_csp": [
             "predicted_structures", "checkpoint_used", "computation_time"
-        ], 
+        ],
+        "screen_structures": [
+            "ranked_structures", "total_screened", "kept", "screening_method"
+        ],
 
         # Calculations (MACE / Physics)
         "calculate_formation_energy": [
@@ -253,6 +256,7 @@ class MCPDetector:
             "filter_compositions": "validation",
             # Phase 1.5 Chemeleon tools
             "generate_crystal_csp": "generation",
+            "screen_structures": "screening",
             # Phase 1.5 MACE tools
             "calculate_formation_energy": "calculation",
             "relax_structure": "optimization",
