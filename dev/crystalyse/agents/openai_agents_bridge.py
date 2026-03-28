@@ -142,7 +142,7 @@ class EnhancedCrystaLyseAgent:
             # Start Servers
             for server_name in [chem_server_name, "visualization"]:
                 try:
-                    config = self.config.get_server_config(server_name)
+                    config = self.config.get_server_config(server_name, mode=self.mode)
                     server = await stack.enter_async_context(
                         MCPServerStdio(
                             name=server_name.replace("_", "").title(),

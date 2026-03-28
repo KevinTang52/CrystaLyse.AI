@@ -256,7 +256,6 @@ class MCPDetector:
             "filter_compositions": "validation",
             # Phase 1.5 Chemeleon tools
             "generate_crystal_csp": "generation",
-            "screen_structures": "screening",
             # Phase 1.5 MACE tools
             "calculate_formation_energy": "calculation",
             "relax_structure": "optimization",

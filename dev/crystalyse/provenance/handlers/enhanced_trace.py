@@ -302,31 +302,39 @@ class ProvenanceTraceHandler(ToolTraceHandler):
         # This fixes the issue where tools labeled "unknown_tool" are miscategorized.
         import json
         try:
-            # Ensure we have a dictionary to inspect
-            if isinstance(serialized_output, str):
-                # Sometimes the output is double-serialized
+            # Normalise to a plain dict regardless of whether serialized_output
+            # arrives as a str, a list of ContentBlocks, or already a dict.
+            raw = serialized_output
+            if isinstance(raw, list) and len(raw) > 0:
+                raw = raw[0]  # take first ContentBlock
+            if isinstance(raw, str):
+                raw = json.loads(raw)
+            # Unwrap {"type":"text","text":"{...}"} MCP envelope
+            if isinstance(raw, dict) and "text" in raw and isinstance(raw.get("text"), str):
                 try:
-                    output_data = json.loads(serialized_output)
-                    if isinstance(output_data, dict) and "text" in output_data:
-                         output_data = json.loads(output_data["text"])
-                except:
-                    output_data = json.loads(serialized_output)
-            else:
-                output_data = serialized_output
+                    raw = json.loads(raw["text"])
+                except Exception:
+                    pass
+            output_data = raw if isinstance(raw, dict) else {}
 
             if isinstance(output_data, dict):
                 # 1. Check for Equation of State results (e.g., b0, v0)
                 if "eos_type" in output_data or ("b0" in output_data and "v0" in output_data):
                     mcp_tool = "fit_equation_of_state"
-                # 2. Check for Structure Relaxation results
+                    if self.output_dir and "volumes" in output_data and "energies" in output_data:
+                        self._save_eos_data(output_data)
+                # 2. Check for single structure relaxation results
                 elif "relaxed_structure" in output_data or "final_energy" in output_data:
                     mcp_tool = "relax_structure"
-                # 3. Check for Symmetry/Space Group analysis
+                    # CIF is NOT saved here — saved only when analyze_space_group is called (top-3 only)
+                # 4. Check for Symmetry/Space Group analysis
                 elif "space_group_symbol" in output_data:
                     mcp_tool = "analyze_space_group"
-                # 4. Check for structure screening results
-                elif "ranked_structures" in output_data and "total_screened" in output_data:
-                    mcp_tool = "screen_structures"
+                    # Save CIF echoed back in the output — only present for top-3 survivors
+                    if self.output_dir:
+                        cif_input = output_data.get("cif_input")
+                        if isinstance(cif_input, str) and cif_input.strip().startswith("data_"):
+                            self._save_cif_from_space_group(cif_input, output_data)
                 else:
                     # Fallback to existing detector if no specific keys are found
                     mcp_tool = self.mcp_detector.detect_tool(serialized_output)
@@ -336,6 +344,15 @@ class ProvenanceTraceHandler(ToolTraceHandler):
         except Exception:
             # Safely handle any parsing errors by falling back to the default detector
             mcp_tool = self.mcp_detector.detect_tool(serialized_output)
+
+        # If content-based detection failed, fall back to wrapper name so that
+        # enhanced_material is still logged (with successful=False) for failed calls.
+        if not mcp_tool:
+            wrapper = tool_call.wrapper_name
+            if wrapper and wrapper.startswith(
+                ("validate_", "calculate_", "analyze_", "predict_", "generate_", "relax_", "fit_", "screen_")
+            ):
+                mcp_tool = wrapper
 
         if mcp_tool:
             tool_call.mcp_tool = mcp_tool
@@ -388,7 +405,7 @@ class ProvenanceTraceHandler(ToolTraceHandler):
 
         # Create enhanced material record for Phase 1.5 tools
         if mcp_tool and mcp_tool.startswith(
-            ("validate_", "calculate_", "analyze_", "predict_", "generate_", "relax_", "fit_")
+            ("validate_", "calculate_", "analyze_", "predict_", "generate_", "relax_", "fit_", "screen_")
         ):
             enhanced_record = create_enhanced_material_record(
                 mcp_tool, serialized_output, datetime.now().isoformat()
@@ -540,6 +557,50 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                     json.dump(output, f, indent=2)
         except Exception as e:
             logger.debug(f"Failed to save raw output: {e}")
+
+    def _save_cif_from_space_group(self, cif_content: str, sg_output: dict):
+        """Save CIF for a top-N survivor when analyze_space_group is called."""
+        try:
+            formula = (
+                sg_output.get("original_formula")
+                or sg_output.get("primitive_formula")
+                or "structure"
+            )
+            idx = 1
+            while (self.output_dir / f"rank{idx}_{formula}.cif").exists():
+                idx += 1
+            cif_file = self.output_dir / f"rank{idx}_{formula}.cif"
+            with open(cif_file, "w") as f:
+                f.write(cif_content)
+            logger.info(f"Saved CIF to {cif_file}")
+        except Exception as e:
+            logger.warning(f"Failed to save CIF: {e}")
+
+    def _save_eos_data(self, output_data: dict):
+        """Save EOS volumes/energies data to run folder."""
+        try:
+            eos_data = {
+                "formula": output_data.get("formula"),
+                "eos_type": output_data.get("eos_type"),
+                "v0_ang3": output_data.get("v0"),
+                "e0_eV": output_data.get("e0"),
+                "b0_GPa": output_data.get("b0"),
+                "b0_prime": output_data.get("b0_prime"),
+                "volumes_ang3": output_data.get("volumes"),
+                "energies_eV": output_data.get("energies"),
+                "ev_table": output_data.get("ev_table"),
+            }
+            # Find a unique filename so multiple EOS results don't overwrite each other
+            formula = output_data.get("formula") or "structure"
+            idx = 1
+            while (self.output_dir / f"eos_rank{idx}_{formula}.json").exists():
+                idx += 1
+            eos_file = self.output_dir / f"eos_rank{idx}_{formula}.json"
+            with open(eos_file, "w") as f:
+                json.dump(eos_data, f, indent=2)
+            logger.info(f"Saved EOS data to {eos_file}")
+        except Exception as e:
+            logger.warning(f"Failed to save EOS data: {e}")
 
     def set_user_query(self, query: str):
         """
@@ -903,6 +964,28 @@ class ProvenanceTraceHandler(ToolTraceHandler):
             if tool_stats["count"] > 0:
                 tool_stats["avg_ms"] = tool_stats["total_ms"] / tool_stats["count"]
 
+        # Pipeline tracking — how many structures passed each computational stage
+        _stage_tools = ("generate_crystal_csp", "relax_structure", "fit_equation_of_state")
+        pipeline = {
+            tool: sum(len(tc.materials_extracted or []) for tc in self.tool_calls.values()
+                      if (tc.mcp_tool or tc.wrapper_name) == tool)
+            for tool in _stage_tools
+        }
+        # Count generated structures from generate_crystal_csp output directly
+        for tc in self.tool_calls.values():
+            if (tc.mcp_tool or tc.wrapper_name) == "generate_crystal_csp":
+                try:
+                    out = tc.output
+                    if isinstance(out, str):
+                        out = json.loads(out)
+                    if isinstance(out, dict):
+                        n = len(out.get("predicted_structures", []))
+                        if n:
+                            pipeline["generate_crystal_csp"] = n
+                            break
+                except Exception:
+                    pass
+
         summary = {
             "session_id": self.session_id,
             "total_time_s": time.time() - self.run_start_time,
@@ -922,6 +1005,7 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                 "max_energy": materials_summary.get("max_energy"),
                 "avg_energy": materials_summary.get("avg_energy"),
             },
+            "pipeline": pipeline,
         }
 
         # Save summary

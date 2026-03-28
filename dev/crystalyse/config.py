@@ -93,7 +93,7 @@ class CrystaLyseConfig:
             == "true",
         }
 
-    def get_server_config(self, server_name: str) -> dict[str, Any]:
+    def get_server_config(self, server_name: str, mode: str | None = None) -> dict[str, Any]:
         """Get MCP server configuration with validation"""
         if server_name not in self.mcp_servers:
             raise ValueError(
@@ -120,6 +120,10 @@ class CrystaLyseConfig:
         # Note: PYTHONPATH manipulation removed in favor of proper dependency declaration
         # MCP server packages now declare 'crystalyse' as a dependency in their pyproject.toml
         # This ensures clean imports without manual path manipulation
+
+        # Propagate mode to the server subprocess so it uses the correct defaults
+        if mode:
+            config["env"]["CRYSTALYSE_MODE"] = mode
 
         if self.debug_mode:
             config["env"]["CRYSTALYSE_DEBUG"] = "true"

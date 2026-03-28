@@ -115,44 +115,11 @@ _MODE_NUM_SAMPLES = {
     "rigorous": 5,   # Thorough — screen 5, relax the best, analyse all survivors
 }
 
-# How many formula units to expand the input formula to before generation.
-# creative: minimal cell (1 f.u.) — fast, maximises diversity across samples
-# adaptive: 1 f.u. — default
-# rigorous: 4 f.u. — captures octahedral tilting, Jahn-Teller distortions, and
-#           symmetry lowering (e.g. ABX3 → A4B4X12, 20 atoms) that are invisible
-#           in the minimal cell.
-_MODE_FORMULA_UNITS = {
-    "creative": 1,
-    "adaptive": 1,
-    "rigorous": 4,
-}
-
-
 def _default_num_samples() -> int:
     """Return the mode-appropriate default for Chemeleon num_samples."""
     mode = os.environ.get("CRYSTALYSE_MODE", "adaptive").lower()
     return _MODE_NUM_SAMPLES.get(mode, 1)
 
-
-def _default_formula_units() -> int:
-    """Return the mode-appropriate formula-unit multiplier for Chemeleon generation."""
-    mode = os.environ.get("CRYSTALYSE_MODE", "adaptive").lower()
-    return _MODE_FORMULA_UNITS.get(mode, 1)
-
-
-def _expand_formula(formula: str, formula_units: int) -> str:
-    """
-    Multiply a formula by formula_units and return the expanded string.
-
-    Examples:
-        _expand_formula("SrTiO3", 4)  -> "Sr4Ti4O12"
-        _expand_formula("LiCoO2", 1)  -> "LiCoO2"
-    """
-    if formula_units <= 1:
-        return formula
-    expanded = Composition(formula) * formula_units
-    # Format without spaces: "Sr4 Ti4 O12" -> "Sr4Ti4O12"
-    return expanded.formula.replace(" ", "")
 
 
 def _get_cif_output_dir() -> str:
@@ -365,12 +332,15 @@ def predict_band_gap(composition: str) -> BandGapResult:
 
 
 @mcp.tool(
-    description="Generate crystal structure for a composition - Use AFTER validation to predict the most likely crystal structure and space group"
+    description=(
+        "Generate candidate crystal structures for a composition using the Chemeleon diffusion model. "
+        "Call this autonomously whenever a crystal structure is needed — do not ask the user to provide one. "
+        "Returns predicted_structures (list of structure dicts) with a next_steps field explaining what to do next."
+    )
 )
 async def generate_crystal_csp(
     formulas: str | list[str],
-    num_samples: int = 1,
-    formula_units: int | None = None,
+    num_samples: int = 0,
     prefer_gpu: bool = True,
 ) -> PredictionResult:
     """
@@ -379,63 +349,44 @@ async def generate_crystal_csp(
     Args:
         formulas: Chemical formula(s) to generate structures for (e.g., "LiCoO2", ["Na2SO4", "CaTiO3"])
         num_samples: Number of structures to generate per formula (default: mode-dependent)
-        formula_units: Number of formula units in the generated cell.
-            Use 1 for minimal cell (e.g. ABX3 → 5 atoms).
-            Use 4 for expanded cell (e.g. ABX3 → A4B4X12, 20 atoms) — enables octahedral
-            tilting, Jahn-Teller distortions, and other symmetry-lowering that are invisible
-            in the minimal cell. Defaults to mode-dependent value (rigorous=4, others=1).
         prefer_gpu: If True, use GPU if available (default: True)
 
     Returns:
         PredictionResult with predicted_structures list.
-        NOTE: formula_units_used is included in the result so downstream tools know
-        the cell size.
     """
     if isinstance(formulas, str):
         formulas_list = [formulas]
     else:
         formulas_list = formulas
 
-    # Apply mode-appropriate defaults if caller left them at sentinel values
-    if num_samples == 1:
+    if num_samples <= 0:
+        # User didn't specify — use mode default
         num_samples = _default_num_samples()
-    if formula_units is None:
-        formula_units = _default_formula_units()
 
     formula = formulas_list[0]
-    generation_formula = _expand_formula(formula, formula_units)
 
-    if generation_formula != formula:
-        logger.info(
-            f"Expanding formula {formula} → {generation_formula} "
-            f"({formula_units} f.u.) for rigorous-mode generation"
-        )
-
-    logger.info(
-        f"Generating structures for: {generation_formula} "
-        f"(num_samples={num_samples}, formula_units={formula_units})"
-    )
+    logger.info(f"Generating structures for: {formula} (num_samples={num_samples})")
 
     result = await chemeleon_predictor.predict_structure(
-        formula=generation_formula, num_samples=num_samples, prefer_gpu=prefer_gpu
+        formula=formula, num_samples=num_samples, prefer_gpu=prefer_gpu
     )
 
-    # Attach the expansion metadata so the agent can report it correctly
     result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
-    result_dict["formula_units_used"] = formula_units
-    result_dict["original_formula"] = formula
-    result_dict["generation_formula"] = generation_formula
 
+    n = len(result_dict.get("predicted_structures", []))
+    keep = min(n, 3)
+    result_dict["next_steps"] = (
+        f"Follow this exact sequence:\n"
+        f"1. Call relax_structure on ALL {n} structures in predicted_structures (one call per structure).\n"
+        f"2. For each relaxed structure, call calculate_energy_above_hull(composition=formula, total_energy=final_energy).\n"
+        f"3. Rank all {n} by energy_above_hull (lowest = most stable). Keep the top {keep}.\n"
+        f"4. For each of the top {keep}, call analyze_space_group(structure_input=cif_content).\n"
+        f"5. If the user asked for bulk modulus or equation of state, call fit_equation_of_state for EACH of the top {keep} survivors (pass relaxed_structure as structure).\n"
+        f"6. Otherwise proceed based on the user's original request."
+    )
     return result_dict
 
 
-@mcp.tool(
-    description=(
-        "Screen and rank Chemeleon-predicted structures by single-point MACE energy — "
-        "run this AFTER generate_crystal_csp and BEFORE relax_structure to avoid relaxing "
-        "every candidate. Returns top-K structures sorted lowest energy first."
-    )
-)
 async def screen_structures(
     structures: list[dict[str, Any]],
     formula: str,
@@ -450,11 +401,10 @@ async def screen_structures(
     BFGS relaxation and gives a reliable relative ranking within the same composition.
     Use this to down-select a large Chemeleon batch before the expensive relaxation step.
 
-    Typical workflow:
-        1. generate_crystal_csp(formula, num_samples=10)  → many candidates
-        2. screen_structures(candidates, formula, keep_top_k=3)  → top 3 by energy
-        3. relax_structure(top_candidate)  → full relaxation on each survivor
-        4. analyze_space_group + calculate_energy_above_hull on relaxed structures
+    This tool is an optional fast pre-filter, NOT part of the standard CSP pipeline.
+    Standard pipeline: generate → relax ALL → rank by energy-above-hull → EOS on survivors.
+    Use screen_structures only when the user explicitly wants a fast single-point pre-filter,
+    or when generating >= 10 candidates and full relaxation of all is impractical.
 
     Args:
         structures: List of structure dicts from generate_crystal_csp
@@ -600,29 +550,18 @@ async def calculate_formation_energy(
     return result
 
 
-@mcp.tool(description="Relax crystal structure to minimize energy using MACE forces")
-async def relax_structure(
-    structure_dict: dict[str, Any], fmax: float = 0.01, steps: int = 500, optimizer: str = "BFGS"
+async def _relax_single(
+    structure_dict: dict[str, Any],
+    fmax: float = 0.01,
+    steps: int = 500,
+    optimizer: str = "BFGS",
 ) -> dict:
     """
-    Relax structure to local energy minimum using MACE forces.
-
-    Args:
-        structure_dict: Initial crystal structure with REQUIRED fields:
-            - numbers: List[int] - atomic numbers (e.g., [3, 27, 8, 8] for LiCoO2)
-            - positions: List[List[float]] - 3D positions in Cartesian coordinates
-            - cell: List[List[float]] - 3x3 lattice matrix in Angstroms
-            - pbc: List[bool] - periodic boundaries (optional, defaults to [True, True, True])
-        fmax: Maximum force convergence criterion (eV/Å)
-        steps: Maximum optimization steps
-        optimizer: Optimization algorithm ('BFGS', 'FIRE', 'LBFGS')
-
-    Returns:
-        Relaxation result with optimized structure
+    Internal helper: relax one structure and save its CIF.
+    E-hull and space group are NOT computed here — they are separate MCP tool calls.
     """
-    logger.info(f"Relaxing structure with {optimizer}")
+    formula = structure_dict.get("formula") or structure_dict.get("symbols", ["unknown"])[0]
 
-    # Normalize structure_dict to only required fields
     normalized_structure = {
         "numbers": structure_dict["numbers"],
         "positions": structure_dict["positions"],
@@ -635,48 +574,46 @@ async def relax_structure(
     )
     result_dict = result.model_dump()
 
-    # Auto-export CIF of the relaxed structure so the user can download it
     if result.success and result.relaxed_structure:
+        # Return CIF content so the agent can pass it to analyze_space_group.
+        # CIF is NOT saved to disk here — it is saved by the provenance handler
+        # when analyze_space_group is called (top-3 only).
         cif_content = _structure_dict_to_cif_string(result.relaxed_structure)
         if cif_content:
-            try:
-                formula = structure_dict.get("formula") or structure_dict.get("symbols", ["unknown"])[0]
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_dir = _get_cif_output_dir()
-                vis_result = visualizer.save_cif_file(
-                    cif_content=cif_content,
-                    formula=formula,
-                    output_dir=output_dir,
-                    title=f"Relaxed {formula} ({timestamp})",
-                )
-                result_dict["cif_content"] = cif_content
-                result_dict["cif_file_path"] = vis_result.output_path or output_dir
-                logger.info(f"Auto-exported relaxed CIF for {formula} to {vis_result.output_path}")
-            except Exception as e:
-                logger.warning(f"CIF auto-export failed: {e}")
-                result_dict["cif_content"] = cif_content
-
-            # Run space group analysis on the relaxed structure
-            try:
-                sg_result = analyze_space_group(structure_input=cif_content)
-                result_dict["space_group"] = sg_result.model_dump() if hasattr(sg_result, "model_dump") else sg_result.dict()
-                logger.info(f"Space group analysis complete: {result_dict['space_group'].get('space_group_symbol', '?')}")
-            except Exception as e:
-                logger.warning(f"Post-relaxation space group analysis failed: {e}")
-
-            # Calculate energy above hull using the final energy from relaxation
-            if result.final_energy is not None:
-                try:
-                    hull_result = calculate_energy_above_hull(
-                        composition=formula,
-                        total_energy=result.final_energy,
-                    )
-                    result_dict["energy_above_hull"] = hull_result.model_dump() if hasattr(hull_result, "model_dump") else hull_result.dict()
-                    logger.info(f"Energy above hull: {result_dict['energy_above_hull'].get('energy_above_hull', '?')} eV/atom")
-                except Exception as e:
-                    logger.warning(f"Post-relaxation energy above hull failed: {e}")
+            result_dict["cif_content"] = cif_content
 
     return result_dict
+
+
+@mcp.tool(
+    description=(
+        "Relax a crystal structure to its energy minimum using MACE forces (BFGS/FIRE/LBFGS). "
+        "Returns final_energy (eV) and cif_content. "
+        "After calling this, call calculate_energy_above_hull to get the E-hull for ranking. "
+        "Call analyze_space_group (passing cif_content) only for the top candidates after filtering."
+    )
+)
+async def relax_structure(
+    structure_dict: dict[str, Any], fmax: float = 0.01, steps: int = 500, optimizer: str = "BFGS"
+) -> dict:
+    """
+    Relax structure to local energy minimum using MACE forces.
+
+    Args:
+        structure_dict: Initial crystal structure with REQUIRED fields:
+            - numbers: List[int] - atomic numbers
+            - positions: List[List[float]] - Cartesian coordinates
+            - cell: List[List[float]] - 3x3 lattice matrix in Angstroms
+            - pbc: List[bool] - periodic boundaries (optional, default [True, True, True])
+        fmax: Maximum force convergence criterion (eV/Å)
+        steps: Maximum optimization steps
+        optimizer: Optimization algorithm ('BFGS', 'FIRE', 'LBFGS')
+
+    Returns:
+        Relaxation result with optimized structure, space_group, and energy_above_hull.
+    """
+    logger.info(f"Relaxing single structure with {optimizer}")
+    return await _relax_single(structure_dict, fmax=fmax, steps=steps, optimizer=optimizer)
 
 
 # ===================================================================
@@ -703,10 +640,18 @@ def analyze_space_group(
     result = pymatgen_analyzer.analyze_space_group(
         structure_input=structure_input, symprec=symprec, angle_tolerance=angle_tolerance
     )
-    return result
+    # Echo CIF input back in the result so the provenance handler can save it
+    result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+    if isinstance(structure_input, str) and structure_input.strip().startswith("data_"):
+        result_dict["cif_input"] = structure_input
+    return result_dict
 
 
-@mcp.tool(description="Calculate energy above hull for thermodynamic stability")
+@mcp.tool(description=(
+    "Calculate energy above hull for thermodynamic stability. "
+    "Call this after every relax_structure to get the E-hull needed to rank candidates. "
+    "Pass composition=formula and total_energy=final_energy from the relax result."
+))
 def calculate_energy_above_hull(composition: str, total_energy: float) -> EnergyAboveHullResult:
     """
     Calculate energy above hull using Materials Project phase diagram.
@@ -974,7 +919,11 @@ def calculate_stress(
     return result
 
 
-@mcp.tool(description="Fit equation of state for bulk modulus calculation")
+@mcp.tool(description=(
+    "Fit equation of state (Birch-Murnaghan) to compute bulk modulus (B₀), equilibrium volume (V₀), "
+    "and minimum energy (E₀). Pass the relaxed_structure dict from relax_structure as 'structure' "
+    "(it must have numbers, positions, cell, pbc). Do NOT use structure_input or any other field name."
+))
 def fit_equation_of_state(
     structure: dict[str, Any],
     eos_type: str = "birchmurnaghan",
