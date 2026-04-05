@@ -326,15 +326,11 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                 # 2. Check for single structure relaxation results
                 elif "relaxed_structure" in output_data or "final_energy" in output_data:
                     mcp_tool = "relax_structure"
-                    # CIF is NOT saved here — saved only when analyze_space_group is called (top-3 only)
+                    # CIF is NOT saved here — saved by the explicit save_cif_file tool call
                 # 4. Check for Symmetry/Space Group analysis
                 elif "space_group_symbol" in output_data:
                     mcp_tool = "analyze_space_group"
-                    # Save CIF echoed back in the output — only present for top-3 survivors
-                    if self.output_dir:
-                        cif_input = output_data.get("cif_input")
-                        if isinstance(cif_input, str) and cif_input.strip().startswith("data_"):
-                            self._save_cif_from_space_group(cif_input, output_data)
+                    # CIF saving is handled by save_cif_file tool — no auto-save here
                 else:
                     # Fallback to existing detector if no specific keys are found
                     mcp_tool = self.mcp_detector.detect_tool(serialized_output)

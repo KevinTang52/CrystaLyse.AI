@@ -26,7 +26,7 @@ class CrystaLyseVisualizer:
 
     @staticmethod
     def save_cif_file(
-        cif_content: str, formula: str, output_dir: str, title: str = "Crystal Structure"
+        cif_content: str, formula: str, output_dir: str, title: str = "Crystal Structure", rank: int = 0
     ) -> VisualizationResult:
         try:
             # --- SMART INTERCEPT BLOCK ---
@@ -46,7 +46,19 @@ class CrystaLyseVisualizer:
 
             output_dir_path = Path(output_dir)
             output_dir_path.mkdir(parents=True, exist_ok=True)
-            cif_output_path = output_dir_path / f"{formula}.cif"
+
+            if rank > 0:
+                # E_hull ranking was done — use rank prefix
+                cif_output_path = output_dir_path / f"rank{rank}_{formula}.cif"
+                description = f"CIF file for {formula} saved (rank {rank} by E_hull)"
+            else:
+                # No ranking — plain name, auto-increment to avoid overwrites
+                cif_output_path = output_dir_path / f"{formula}.cif"
+                idx = 2
+                while cif_output_path.exists():
+                    cif_output_path = output_dir_path / f"{formula}_{idx}.cif"
+                    idx += 1
+                description = f"CIF file for {formula} saved"
 
             with open(cif_output_path, "w") as f:
                 f.write(cif_content)
@@ -56,7 +68,7 @@ class CrystaLyseVisualizer:
                 visualization_type="cif_file",
                 output_path=str(cif_output_path),
                 formula=formula,
-                description=f"CIF file for {formula} saved",
+                description=description,
             )
         except Exception as e:
             logger.error(f"❌ CIF file saving failed: {e}")

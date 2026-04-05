@@ -376,13 +376,10 @@ async def generate_crystal_csp(
     n = len(result_dict.get("predicted_structures", []))
     keep = min(n, 3)
     result_dict["next_steps"] = (
-        f"Follow this exact sequence:\n"
-        f"1. Call relax_structure on ALL {n} structures in predicted_structures (one call per structure).\n"
-        f"2. For each relaxed structure, call calculate_energy_above_hull(composition=formula, total_energy=final_energy).\n"
-        f"3. Rank all {n} by energy_above_hull (lowest = most stable). Keep the top {keep}.\n"
-        f"4. For each of the top {keep}, call analyze_space_group(structure_input=cif_content).\n"
-        f"5. If the user asked for bulk modulus or equation of state, call fit_equation_of_state for EACH of the top {keep} survivors (pass relaxed_structure as structure).\n"
-        f"6. Otherwise proceed based on the user's original request."
+        f"{n} structures generated. Choose the appropriate next step:\n"
+        f"- If the user wants ALL structures relaxed and saved (no filtering): call relax_and_save_all(structures=predicted_structures, formula=formula). ONE tool call handles everything.\n"
+        f"- If the user wants ranking/filtering: call relax_structure on each, then calculate_energy_above_hull, rank by hull energy, keep top {keep}, then save_cif_file for survivors only.\n"
+        f"Follow the user's instructions — do not calculate energy_above_hull if the user said not to."
     )
     return result_dict
 
@@ -616,6 +613,75 @@ async def relax_structure(
     return await _relax_single(structure_dict, fmax=fmax, steps=steps, optimizer=optimizer)
 
 
+@mcp.tool(
+    description=(
+        "Relax ALL structures from generate_crystal_csp and save each as a CIF file. "
+        "Use this instead of calling relax_structure + save_cif_file in a loop. "
+        "Returns a summary with the count of successfully relaxed and saved structures."
+    )
+)
+async def relax_and_save_all(
+    structures: list[dict[str, Any]],
+    formula: str,
+    fmax: float = 0.01,
+    steps: int = 500,
+    optimizer: str = "BFGS",
+) -> dict[str, Any]:
+    """
+    Relax every structure in the list and save each as a CIF file.
+
+    Args:
+        structures: List of structure dicts from generate_crystal_csp
+                    (each with 'numbers', 'positions', 'cell', and optionally 'pbc')
+        formula: Chemical formula used for CIF file naming (e.g. "Ba4Ti4O12")
+        fmax: Maximum force convergence criterion in eV/Å (default 0.01)
+        steps: Maximum optimisation steps (default 500)
+        optimizer: Optimisation algorithm: 'BFGS', 'FIRE', or 'LBFGS'
+
+    Returns:
+        Dict with 'total', 'saved', 'failed', and per-structure 'results' list.
+    """
+    output_dir = os.getenv("CRYSTALYSE_OUTPUT_DIR", ".")
+    total = len(structures)
+    saved = 0
+    failed = 0
+    results = []
+
+    logger.info(f"relax_and_save_all: relaxing {total} structures for {formula}")
+
+    for i, structure_dict in enumerate(structures):
+        try:
+            relaxed = await _relax_single(structure_dict, fmax=fmax, steps=steps, optimizer=optimizer)
+            cif_content = relaxed.get("cif_content")
+            if relaxed.get("success") and cif_content:
+                visualizer.save_cif_file(
+                    cif_content=cif_content,
+                    formula=formula,
+                    output_dir=output_dir,
+                    title=f"{formula} structure {i + 1}",
+                    rank=0,
+                )
+                saved += 1
+                results.append({"index": i + 1, "status": "saved", "final_energy": relaxed.get("final_energy")})
+                logger.info(f"  [{i + 1}/{total}] saved")
+            else:
+                failed += 1
+                results.append({"index": i + 1, "status": "failed", "error": relaxed.get("error", "relaxation failed")})
+                logger.warning(f"  [{i + 1}/{total}] relaxation failed")
+        except Exception as e:
+            failed += 1
+            results.append({"index": i + 1, "status": "error", "error": str(e)})
+            logger.error(f"  [{i + 1}/{total}] error: {e}")
+
+    logger.info(f"relax_and_save_all complete: {saved}/{total} saved, {failed} failed")
+    return {
+        "total": total,
+        "saved": saved,
+        "failed": failed,
+        "results": results,
+    }
+
+
 # ===================================================================
 # PYMATGEN TOOLS - Now using modular implementation
 # ===================================================================
@@ -725,23 +791,31 @@ def validate_oxidation_states(structure_input: str | dict[str, Any]) -> dict:
 
 @mcp.tool(description="Save crystal structure as CIF file")
 def save_cif_file(
-    cif_content: str, formula: str, output_dir: str, title: str = "Crystal Structure"
+    cif_content: str,
+    formula: str,
+    output_dir: str = "",
+    title: str = "Crystal Structure",
+    rank: int = 0,
 ) -> VisualizationResult:
     """
-    Save CIF file to output directory with caching.
+    Save CIF file to output directory.
 
     Args:
         cif_content: CIF file content as string
         formula: Chemical formula for naming
-        output_dir: Directory to save CIF file
+        output_dir: Directory to save CIF file. Defaults to CRYSTALYSE_OUTPUT_DIR env var.
         title: Title for the structure
+        rank: E_hull rank (1 = best). When provided, saves as rank{n}_formula.cif.
+              Omit (or pass 0) when no E_hull sorting has been performed.
 
     Returns:
         Structured visualization result
     """
-    logger.info(f"Saving CIF file for {formula}")
+    if not output_dir:
+        output_dir = os.getenv("CRYSTALYSE_OUTPUT_DIR", ".")
+    logger.info(f"Saving CIF file for {formula} to {output_dir} (rank={rank})")
     result = visualizer.save_cif_file(
-        cif_content=cif_content, formula=formula, output_dir=output_dir, title=title
+        cif_content=cif_content, formula=formula, output_dir=output_dir, title=title, rank=rank
     )
     return result
 

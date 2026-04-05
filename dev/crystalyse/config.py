@@ -49,8 +49,8 @@ class CrystaLyseConfig:
         # Mode-specific timeouts
         self.mode_timeouts = {
             "creative": 120,  # 2 minutes for fast exploration
-            "adaptive": 180,  # 3 minutes for balanced approach
-            "rigorous": 300,  # 5 minutes for comprehensive validation
+            "adaptive": 300,  # 5 minutes for balanced approach
+            "rigorous": 600,  # 10 minutes for comprehensive validation (CSP alone ~140s for 10 structures)
         }
 
         # Performance Configuration
@@ -93,7 +93,7 @@ class CrystaLyseConfig:
             == "true",
         }
 
-    def get_server_config(self, server_name: str, mode: str | None = None) -> dict[str, Any]:
+    def get_server_config(self, server_name: str, mode: str | None = None, output_dir: str | None = None) -> dict[str, Any]:
         """Get MCP server configuration with validation"""
         if server_name not in self.mcp_servers:
             raise ValueError(
@@ -124,6 +124,10 @@ class CrystaLyseConfig:
         # Propagate mode to the server subprocess so it uses the correct defaults
         if mode:
             config["env"]["CRYSTALYSE_MODE"] = mode
+
+        # Propagate the provenance run directory so save_cif_file saves to the right place
+        if output_dir:
+            config["env"]["CRYSTALYSE_OUTPUT_DIR"] = output_dir
 
         if self.debug_mode:
             config["env"]["CRYSTALYSE_DEBUG"] = "true"

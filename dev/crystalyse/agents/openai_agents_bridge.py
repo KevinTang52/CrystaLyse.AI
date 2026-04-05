@@ -123,7 +123,7 @@ class EnhancedCrystaLyseAgent:
             return False
 
     @asynccontextmanager
-    async def _managed_mcp_servers(self):
+    async def _managed_mcp_servers(self, output_dir: str | None = None):
         """Starts, manages, and stops MCP servers."""
         if not SDK_AVAILABLE:
             yield []
@@ -142,7 +142,7 @@ class EnhancedCrystaLyseAgent:
             # Start Servers
             for server_name in [chem_server_name, "visualization"]:
                 try:
-                    config = self.config.get_server_config(server_name, mode=self.mode)
+                    config = self.config.get_server_config(server_name, mode=self.mode, output_dir=output_dir)
                     server = await stack.enter_async_context(
                         MCPServerStdio(
                             name=server_name.replace("_", "").title(),
@@ -205,7 +205,12 @@ class EnhancedCrystaLyseAgent:
         if trace_handler is not None and hasattr(trace_handler, "set_user_query"):
             trace_handler.set_user_query(query)
 
-        async with self._managed_mcp_servers() as mcp_servers:
+        run_output_dir = (
+            str(trace_handler.output_dir.resolve())
+            if trace_handler and hasattr(trace_handler, "output_dir") and trace_handler.output_dir
+            else None
+        )
+        async with self._managed_mcp_servers(output_dir=run_output_dir) as mcp_servers:
             try:
                 # Use persistent session created in __init__
                 # This ensures conversation continuity across multiple discover() calls (interactive chat)
