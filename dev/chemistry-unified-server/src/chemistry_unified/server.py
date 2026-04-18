@@ -22,7 +22,9 @@ import logging
 import warnings
 from typing import Any
 
+import asyncio
 import numpy as np
+from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 
 # Suppress e3nn warning about TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD
@@ -69,8 +71,23 @@ logger = logging.getLogger(__name__)
 # Suppress warnings
 warnings.filterwarnings("ignore", message=".*Pauling electronegativity.*")
 
+# Pre-warm Chemeleon model at server startup to avoid 30s cold load on first request
+@asynccontextmanager
+async def lifespan(server):
+    logger.info("Server startup: pre-warming Chemeleon model...")
+    try:
+        from crystalyse.tools.chemeleon.predictor import _load_model
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None, lambda: _load_model(task="csp", prefer_gpu=True)
+        )
+        logger.info("Chemeleon model pre-warmed successfully.")
+    except Exception as e:
+        logger.warning(f"Chemeleon pre-warm failed (non-fatal): {e}")
+    yield
+
 # Initialize FastMCP server
-mcp = FastMCP("Chemistry Unified")
+mcp = FastMCP("Chemistry Unified", lifespan=lifespan)
 
 # Initialize tool instances
 smact_validator = SMACTValidator()
@@ -80,6 +97,10 @@ mace_calculator = MACECalculator()
 pymatgen_analyzer = PyMatgenAnalyzer()
 phase_diagram_analyzer = PhaseDiagramAnalyzer()
 visualizer = CrystaLyseVisualizer()
+
+# Server-side cache: stores last generated structures per formula
+# so relax_and_save_all can retrieve them if the agent forgets to pass structures
+_last_generated_structures: dict[str, list[dict]] = {}
 
 # --- Core Utility Functions ---
 
@@ -119,6 +140,33 @@ def _default_num_samples() -> int:
     """Return the mode-appropriate default for Chemeleon num_samples."""
     mode = os.environ.get("CRYSTALYSE_MODE", "adaptive").lower()
     return _MODE_NUM_SAMPLES.get(mode, 1)
+
+
+def _expand_perovskite_formula(formula: str) -> str:
+    """
+    If formula is an ABX3 perovskite (3 elements, stoichiometry 1:1:3),
+    expand to A4B4X12 so Chemeleon can generate octahedrally-tilted phases.
+    Returns the formula unchanged if it is not ABX3.
+    """
+    try:
+        comp = Composition(formula)
+        elements = list(comp.elements)
+        if len(elements) != 3:
+            return formula
+        amounts = [comp[el] for el in elements]
+        # Normalise to smallest integers
+        from math import gcd
+        from functools import reduce
+        g = reduce(gcd, [int(a) for a in amounts])
+        normed = [int(a) / g for a in amounts]
+        normed_sorted = sorted(normed)
+        # ABX3 pattern: ratios 1, 1, 3
+        if normed_sorted == [1.0, 1.0, 3.0]:
+            expanded = Composition({el: comp[el] * 4 for el in elements})
+            return expanded.formula.replace(" ", "")
+    except Exception:
+        pass
+    return formula
 
 
 
@@ -365,6 +413,14 @@ async def generate_crystal_csp(
 
     formula = formulas_list[0]
 
+    # Auto-expand ABX3 perovskites to A4B4X12 supercell so Chemeleon can
+    # generate tilted (non-cubic) phases with octahedral tilting distortions.
+    # A single ABX3 unit cell forces cubic symmetry and cannot show tilting.
+    original_formula = formula
+    formula = _expand_perovskite_formula(formula)
+    if formula != original_formula:
+        logger.info(f"Perovskite detected: expanded {original_formula} -> {formula} for octahedral tilting")
+
     logger.info(f"Generating structures for: {formula} (num_samples={num_samples})")
 
     result = await chemeleon_predictor.predict_structure(
@@ -373,14 +429,43 @@ async def generate_crystal_csp(
 
     result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
 
+    # Cache structures server-side so relax_and_save_all can recover them if agent forgets
+    # Cache under both the expanded formula and the original so lookups always work
+    _last_generated_structures[formula] = result_dict.get("predicted_structures", [])
+    if original_formula != formula:
+        _last_generated_structures[original_formula] = _last_generated_structures[formula]
+
     n = len(result_dict.get("predicted_structures", []))
     keep = min(n, 3)
-    result_dict["next_steps"] = (
-        f"{n} structures generated. Choose the appropriate next step:\n"
-        f"- If the user wants ALL structures relaxed and saved (no filtering): call relax_and_save_all(structures=predicted_structures, formula=formula). ONE tool call handles everything.\n"
-        f"- If the user wants ranking/filtering: call relax_structure on each, then calculate_energy_above_hull, rank by hull energy, keep top {keep}, then save_cif_file for survivors only.\n"
-        f"Follow the user's instructions — do not calculate energy_above_hull if the user said not to."
-    )
+    mode = os.environ.get("CRYSTALYSE_MODE", "adaptive").lower()
+
+    if mode == "rigorous":
+        result_dict["next_steps"] = (
+            f"{n} structures generated for {formula}. "
+            f"REQUIRED NEXT CALL (rigorous pipeline — bulk modulus / hull ranking):\n"
+            f"Step 1: relax_all_for_ranking — set the 'structures' parameter to the 'predicted_structures' ARRAY from this response (the list of {n} structure dicts above), and formula='{formula}'. "
+            f"Do NOT pass the string 'predicted_structures' — pass the actual array value.\n"
+            f"Step 2 (after step 1 returns): analyze_top_structures(top_structures=<top_structures array from step 1 result>, formula='{formula}'). "
+            f"This handles space groups + EOS + CIF saves for ALL top structures in one call. "
+            f"Do NOT call analyze_space_group or fit_equation_of_state individually. "
+            f"Do NOT move on to the next compound until analyze_top_structures for {formula} is complete."
+        )
+    elif mode == "creative":
+        result_dict["next_steps"] = (
+            f"{n} structures generated for {formula}. CREATIVE MODE — "
+            f"call relax_and_save_all with the 'structures' parameter set to the 'predicted_structures' ARRAY from this response, and formula='{formula}'. "
+            f"Do NOT pass the string 'predicted_structures' — pass the actual array value. "
+            f"ONE tool call handles everything. No hull filtering needed."
+        )
+    else:
+        # adaptive
+        result_dict["next_steps"] = (
+            f"{n} structures generated for {formula}. Choose the appropriate next step:\n"
+            f"- For bulk modulus / rigorous pipeline: call relax_all_for_ranking with the 'structures' parameter set to the 'predicted_structures' ARRAY from this response (the list of {n} structure dicts). "
+            f"Do NOT pass the string 'predicted_structures' — pass the actual array value.\n"
+            f"- For all structures relaxed and saved (no filtering): call relax_and_save_all with the same 'predicted_structures' array and formula='{formula}'.\n"
+            f"Follow the user's instructions."
+        )
     return result_dict
 
 
@@ -559,6 +644,14 @@ async def _relax_single(
     """
     formula = structure_dict.get("formula") or structure_dict.get("symbols", ["unknown"])[0]
 
+    missing = [k for k in ("numbers", "positions", "cell") if k not in structure_dict]
+    if missing:
+        return {
+            "success": False,
+            "error": f"structure_dict is missing required fields: {missing}. "
+                     f"Pass a structure dict directly from generate_crystal_csp predicted_structures list.",
+        }
+
     normalized_structure = {
         "numbers": structure_dict["numbers"],
         "positions": structure_dict["positions"],
@@ -615,6 +708,210 @@ async def relax_structure(
 
 @mcp.tool(
     description=(
+        "Relax ALL structures from generate_crystal_csp, rank by energy above hull, and return the "
+        "top-3 pre-ranked structures ready for EOS. Handles relaxation + hull ranking in one call — "
+        "you do NOT need to call calculate_energy_above_hull separately. "
+        "The 'structures' parameter must be the actual predicted_structures ARRAY from generate_crystal_csp, not the string 'predicted_structures'."
+    )
+)
+async def relax_all_for_ranking(
+    structures: list[dict[str, Any]],
+    formula: str,
+    fmax: float = 0.01,
+    steps: int = 500,
+    optimizer: str = "BFGS",
+    top_k: int = 3,
+) -> dict[str, Any]:
+    """
+    Relax every structure, compute hull energy for each, rank, and return top-k.
+
+    Args:
+        structures: List of structure dicts from generate_crystal_csp predicted_structures
+        formula: Chemical formula (e.g. 'Ca4Ti4O12')
+        fmax: Force convergence criterion (eV/Å)
+        steps: Max optimisation steps
+        optimizer: 'BFGS', 'FIRE', or 'LBFGS'
+        top_k: Number of top structures to return (default 3)
+
+    Returns:
+        Dict with 'top_structures' list pre-ranked by E_hull, ready for fit_equation_of_state.
+    """
+    # Filter None entries
+    structures = [s for s in structures if s is not None and isinstance(s, dict)]
+    # Recover from cache if agent forgot to pass structures
+    if not structures and formula in _last_generated_structures:
+        logger.warning(f"relax_all_for_ranking: recovering structures from cache for {formula}")
+        structures = _last_generated_structures[formula]
+
+    total = len(structures)
+    if total == 0:
+        logger.error(f"relax_all_for_ranking: received 0 structures for {formula}. "
+                     f"Cache keys available: {list(_last_generated_structures.keys())}")
+        return {
+            "formula": formula,
+            "total_relaxed": 0,
+            "top_structures": [],
+            "error": (
+                f"ERROR: No structures were received for {formula}. "
+                f"You must pass structures=predicted_structures (the list from generate_crystal_csp). "
+                f"Do NOT call relax_all_for_ranking again — call generate_crystal_csp(formula='{formula}') first, "
+                f"then immediately pass the returned predicted_structures to relax_all_for_ranking."
+            ),
+        }
+
+    logger.info(f"relax_all_for_ranking: relaxing {total} structures for {formula}")
+    relaxed = []
+    for i, structure_dict in enumerate(structures):
+        if i == 0:
+            logger.debug(f"  structure[0] keys: {list(structure_dict.keys()) if isinstance(structure_dict, dict) else type(structure_dict)}")
+        result = await _relax_single(structure_dict, fmax=fmax, steps=steps, optimizer=optimizer)
+        if result.get("success") and result.get("converged"):
+            # Volume sanity check: reject unphysical structures (< 4 Å³/atom)
+            relaxed_struct = result.get("relaxed_structure", {})
+            n_atoms = len(relaxed_struct.get("numbers", structure_dict.get("numbers", [])))
+            vol = relaxed_struct.get("volume")
+            if vol is None:
+                # Compute from cell if not provided
+                try:
+                    import numpy as np
+                    cell = np.array(relaxed_struct.get("cell", structure_dict.get("cell", [])))
+                    vol = float(abs(np.linalg.det(cell))) if cell.shape == (3, 3) else None
+                except Exception:
+                    vol = None
+            if vol is not None and n_atoms > 0 and (vol / n_atoms) < 4.0:
+                logger.warning(f"  [{i+1}/{total}] rejected: volume/atom={vol/n_atoms:.2f} Å³ (unphysical)")
+                continue
+            # Compute hull energy inline
+            try:
+                hull_result = phase_diagram_analyzer.calculate_energy_above_hull(
+                    composition=formula,
+                    total_energy=result["final_energy"],
+                )
+                e_hull = hull_result.energy_above_hull if hasattr(hull_result, "energy_above_hull") else float("inf")
+            except Exception:
+                e_hull = float("inf")
+            relaxed.append({
+                "index": i + 1,
+                "success": True,
+                "converged": True,
+                "final_energy": result["final_energy"],
+                "energy_above_hull": e_hull,
+                "relaxed_structure": result.get("relaxed_structure"),
+            })
+            logger.info(f"  [{i+1}/{total}] ok energy={result['final_energy']:.4f} e_hull={e_hull:.4f} vol/atom={vol/n_atoms if vol and n_atoms else '?':.1f}")
+        else:
+            err = result.get("error", "unknown error")
+            logger.warning(f"  [{i+1}/{total}] failed/unconverged — {err}")
+
+    if len(relaxed) == 0:
+        return {
+            "formula": formula,
+            "total_relaxed": 0,
+            "top_structures": [],
+            "error": (
+                f"ERROR: All {total} structures failed relaxation for {formula}. "
+                f"This usually means the structure dicts are malformed. "
+                f"Pass structures directly from generate_crystal_csp predicted_structures — "
+                f"each dict must have 'numbers', 'positions', and 'cell' fields."
+            ),
+        }
+
+    # Rank by hull energy; fall back to total energy when all e_hull=inf (phase diagram lookup failed)
+    all_hull_inf = all(e["energy_above_hull"] == float("inf") for e in relaxed)
+    if all_hull_inf:
+        logger.warning(f"relax_all_for_ranking: all e_hull=inf for {formula} — falling back to total energy ranking")
+        ranked = sorted(relaxed, key=lambda x: x["final_energy"])
+    else:
+        ranked = sorted(relaxed, key=lambda x: x["energy_above_hull"])
+
+    ranking_basis = "total_energy (e_hull fallback)" if all_hull_inf else "energy_above_hull"
+    logger.info(f"relax_all_for_ranking: {len(relaxed)}/{total} converged, ranked by {ranking_basis}")
+
+    # --- Greedy deduplication with backfill via StructureMatcher ---
+    # Iterate through the full ranked list and pick unique structures until we have top_k.
+    # If rank 2 is a duplicate of rank 1, we try rank 4, rank 5, etc. to fill the slot.
+    n_duplicates_skipped = 0
+    top_structures = []
+
+    try:
+        from pymatgen.analysis.structure_matcher import StructureMatcher
+        from pymatgen.core import Structure, Lattice
+
+        def _dict_to_pymatgen(s_dict: dict) -> Structure | None:
+            try:
+                if "lattice" in s_dict and "sites" in s_dict:
+                    return Structure.from_dict(s_dict)
+                elif "cell" in s_dict and "positions" in s_dict:
+                    cell = s_dict["cell"]
+                    positions = s_dict["positions"]
+                    species = s_dict.get("numbers") or s_dict.get("symbols")
+                    if species is None:
+                        return None
+                    return Structure(Lattice(cell), species, positions, coords_are_cartesian=True)
+            except Exception as e:
+                logger.debug(f"_dict_to_pymatgen failed: {e}")
+            return None
+
+        matcher = StructureMatcher(ltol=0.2, stol=0.3, angle_tol=5.0, primitive_cell=True, scale=True)
+        accepted_pymatgen: list[Structure | None] = []  # parallel to top_structures
+
+        for candidate in ranked:
+            if len(top_structures) == top_k:
+                break
+            s_cand = _dict_to_pymatgen(candidate.get("relaxed_structure", {}))
+            duplicate_of = None
+            for idx, s_accepted in enumerate(accepted_pymatgen):
+                if s_accepted is None or s_cand is None:
+                    continue
+                try:
+                    if matcher.fit(s_accepted, s_cand):
+                        duplicate_of = f"rank_{top_structures[idx]['rank']}"
+                        break
+                except Exception as e:
+                    logger.debug(f"  StructureMatcher.fit error: {e}")
+            if duplicate_of:
+                n_duplicates_skipped += 1
+                logger.info(f"  StructureMatcher: candidate (index={candidate['index']}) is duplicate of {duplicate_of} — skipping, trying next")
+            else:
+                candidate["is_duplicate"] = False
+                candidate["duplicate_of"] = None
+                candidate["rank"] = len(top_structures) + 1
+                top_structures.append(candidate)
+                accepted_pymatgen.append(s_cand)
+
+        logger.info(f"  StructureMatcher: {n_duplicates_skipped} duplicates skipped, {len(top_structures)} unique structures selected")
+
+    except Exception as e:
+        logger.warning(f"StructureMatcher deduplication failed (non-fatal): {e}")
+        # Fall back to simple top_k slice without deduplication
+        top_structures = ranked[:top_k]
+        for rank, entry in enumerate(top_structures, 1):
+            entry["rank"] = rank
+            entry["is_duplicate"] = False
+            entry["duplicate_of"] = None
+
+    n_unique = len(top_structures)
+    logger.info(f"relax_all_for_ranking complete: returning {n_unique} unique top structures for {formula}")
+
+    return {
+        "formula": formula,
+        "total_relaxed": len(relaxed),
+        "n_unique_structures": n_unique,
+        "n_duplicates_skipped": n_duplicates_skipped,
+        "top_structures": top_structures,
+        "next_steps": (
+            f"{n_unique} unique top structures selected for {formula} "
+            f"({n_duplicates_skipped} duplicate(s) skipped via StructureMatcher backfill). "
+            f"REQUIRED: Call analyze_top_structures(top_structures=<this result's top_structures>, formula='{formula}'). "
+            f"ONE call handles all space groups, all EOS fits, and all CIF saves for all {n_unique} structures. "
+            f"Do NOT call analyze_space_group or fit_equation_of_state individually. "
+            f"Do NOT move on to the next compound until analyze_top_structures for {formula} is complete."
+        ),
+    }
+
+
+@mcp.tool(
+    description=(
         "Relax ALL structures from generate_crystal_csp and save each as a CIF file. "
         "Use this instead of calling relax_structure + save_cif_file in a loop. "
         "Returns a summary with the count of successfully relaxed and saved structures."
@@ -642,6 +939,12 @@ async def relax_and_save_all(
         Dict with 'total', 'saved', 'failed', and per-structure 'results' list.
     """
     output_dir = os.getenv("CRYSTALYSE_OUTPUT_DIR", ".")
+    # Filter out any None entries the agent may pass
+    structures = [s for s in structures if s is not None and isinstance(s, dict)]
+    # If agent forgot to pass structures, recover from server-side cache
+    if not structures and formula in _last_generated_structures:
+        logger.warning(f"relax_and_save_all: no structures passed, recovering from cache for {formula}")
+        structures = _last_generated_structures[formula]
     total = len(structures)
     saved = 0
     failed = 0
@@ -1005,17 +1308,20 @@ def fit_equation_of_state(
     n_points: int = 7,
     model_type: str = "mace_mp",
     size: str = "medium",
+    rank: int = 0,
 ) -> EOSResult:
     """
     Fit equation of state by calculating energy at multiple volumes.
+    Automatically saves a CIF file for the structure after a successful fit.
 
     Args:
-        structure: Structure dictionary
+        structure: Structure dictionary (numbers, positions, cell, pbc)
         eos_type: EOS type ('birchmurnaghan', 'murnaghan', 'vinet')
         strain_range: Strain range (+/-)
         n_points: Number of volume points
         model_type: MACE model type
         size: Model size
+        rank: Hull rank of this structure (1=best). Used for CIF filename.
 
     Returns:
         EOS fitting result with bulk modulus and equilibrium properties
@@ -1038,7 +1344,169 @@ def fit_equation_of_state(
             rows.append(f"| {v:.4f} | {e:.6f} |")
         result_dict["ev_table"] = "\n".join(rows)
 
+    # Auto-save CIF so the agent doesn't need a separate save_cif_file call
+    if result.success:
+        try:
+            cif_content = _structure_dict_to_cif_string(structure)
+            if cif_content:
+                formula = structure.get("formula", result_dict.get("formula", "unknown"))
+                output_dir = os.getenv("CRYSTALYSE_OUTPUT_DIR", ".")
+                visualizer.save_cif_file(
+                    cif_content=cif_content,
+                    formula=formula,
+                    output_dir=output_dir,
+                    title=f"{formula} EOS rank {rank}",
+                    rank=rank,
+                )
+                result_dict["cif_saved"] = True
+                logger.info(f"Auto-saved CIF for {formula} rank={rank}")
+        except Exception as e:
+            logger.warning(f"Auto-save CIF failed: {e}")
+            result_dict["cif_saved"] = False
+
     return result_dict
+
+
+@mcp.tool(description=(
+    "Run the full post-relaxation analysis for ALL top structures in one call. "
+    "Pass top_structures from relax_all_for_ranking and the formula. "
+    "For each structure this tool runs: analyze_space_group + fit_equation_of_state (with CIF auto-save). "
+    "Returns space groups and bulk moduli for all ranks. "
+    "Use this instead of calling analyze_space_group and fit_equation_of_state individually."
+))
+async def analyze_top_structures(
+    top_structures: list[dict[str, Any]],
+    formula: str,
+    eos_type: str = "birchmurnaghan",
+    strain_range: float = 0.05,
+    n_points: int = 7,
+) -> dict[str, Any]:
+    """
+    Run analyze_space_group + fit_equation_of_state for every entry in top_structures.
+
+    Args:
+        top_structures: List from relax_all_for_ranking (each entry has 'relaxed_structure' and 'rank')
+        formula: Chemical formula (e.g. 'CaTiO3')
+        eos_type: EOS model type (default: birchmurnaghan)
+        strain_range: Strain range for EOS fitting (default: 0.05)
+        n_points: Number of strain points (default: 7)
+
+    Returns:
+        Dict with 'results' list containing space_group and eos for each rank
+    """
+    results = []
+    n = len(top_structures)
+    logger.info(f"analyze_top_structures: processing {n} structures for {formula}")
+
+    for entry in top_structures:
+        rank = entry.get("rank", 0)
+        structure = entry.get("relaxed_structure")
+        if not structure:
+            logger.warning(f"  rank={rank}: no relaxed_structure — skipping")
+            results.append({"rank": rank, "error": "no relaxed_structure"})
+            continue
+
+        # Skip EOS for structural duplicates — they share the same geometry as a higher-ranked structure
+        if entry.get("is_duplicate"):
+            dup_of = entry.get("duplicate_of", "unknown")
+            logger.info(f"  rank={rank}: structural duplicate of {dup_of} — skipping EOS, recording space group only")
+            try:
+                sg_raw = pymatgen_analyzer.analyze_space_group(
+                    structure_input=structure, symprec=0.1, angle_tolerance=5.0
+                )
+                sg_dict = sg_raw.model_dump() if hasattr(sg_raw, "model_dump") else sg_raw.dict()
+            except Exception as e:
+                sg_dict = {"error": str(e)}
+            results.append({
+                "rank": rank,
+                "space_group": sg_dict,
+                "eos": {"skipped": True, "reason": f"structural duplicate of {dup_of}"},
+                "is_duplicate": True,
+                "duplicate_of": dup_of,
+            })
+            continue
+
+        # Step A: space group
+        try:
+            sg_raw = pymatgen_analyzer.analyze_space_group(
+                structure_input=structure, symprec=0.1, angle_tolerance=5.0
+            )
+            sg_dict = sg_raw.model_dump() if hasattr(sg_raw, "model_dump") else sg_raw.dict()
+            logger.info(f"  rank={rank}: sg={sg_dict.get('space_group_symbol','?')} vol={sg_dict.get('volume','?'):.2f}")
+        except Exception as e:
+            logger.warning(f"  rank={rank}: analyze_space_group failed — {e}")
+            sg_dict = {"error": str(e)}
+
+        # Step B: EOS + CIF auto-save
+        try:
+            eos_raw = MACEStressCalculator.fit_equation_of_state(
+                structure=structure,
+                eos_type=eos_type,
+                strain_range=strain_range,
+                n_points=n_points,
+            )
+            eos_dict = eos_raw.model_dump() if hasattr(eos_raw, "model_dump") else eos_raw.dict()
+
+            # Build E-V table
+            if eos_raw.success and eos_raw.volumes and eos_raw.energies:
+                rows = ["| V (Å³) | E (eV) |", "|--------|--------|"]
+                for v, e in zip(eos_raw.volumes, eos_raw.energies):
+                    rows.append(f"| {v:.4f} | {e:.6f} |")
+                eos_dict["ev_table"] = "\n".join(rows)
+
+            # Auto-save CIF — prefer symmetrized CIF from spglib (Step A) over raw ASE P1 fallback
+            if eos_raw.success:
+                try:
+                    cif_content = sg_dict.get("symmetrized_cif") or _structure_dict_to_cif_string(structure)
+                    if cif_content:
+                        struct_formula = structure.get("formula", formula)
+                        output_dir = os.getenv("CRYSTALYSE_OUTPUT_DIR", ".")
+                        visualizer.save_cif_file(
+                            cif_content=cif_content,
+                            formula=struct_formula,
+                            output_dir=output_dir,
+                            title=f"{struct_formula} EOS rank {rank}",
+                            rank=rank,
+                        )
+                        eos_dict["cif_saved"] = True
+                        logger.info(f"  rank={rank}: b0={eos_dict.get('b0','?')} CIF saved")
+                except Exception as e:
+                    logger.warning(f"  rank={rank}: CIF save failed — {e}")
+        except Exception as e:
+            logger.warning(f"  rank={rank}: fit_equation_of_state failed — {e}")
+            eos_dict = {"error": str(e)}
+
+        results.append({
+            "rank": rank,
+            "space_group": sg_dict,
+            "eos": eos_dict,
+        })
+
+    # Build summary table
+    summary_rows = ["| Rank | Space Group | B₀ (GPa) | V₀ (Å³) | Note |", "|------|------------|----------|---------|------|"]
+    for r in results:
+        sg = r.get("space_group", {}).get("space_group_symbol", "?")
+        eos = r.get("eos", {})
+        b0 = eos.get("b0", "?")
+        v0 = eos.get("v0", "?")
+        b0_str = f"{b0:.1f}" if isinstance(b0, (int, float)) else str(b0)
+        v0_str = f"{v0:.1f}" if isinstance(v0, (int, float)) else str(v0)
+        if r.get("is_duplicate"):
+            note = f"duplicate of {r.get('duplicate_of', '?')}"
+            b0_str = "—"
+            v0_str = "—"
+        else:
+            note = ""
+        summary_rows.append(f"| {r['rank']} | {sg} | {b0_str} | {v0_str} | {note} |")
+
+    n_unique = sum(1 for r in results if not r.get("is_duplicate", False))
+    return {
+        "formula": formula,
+        "n_analyzed": len(results),
+        "n_unique": n_unique,
+        "results": results,
+        "summary_table": "\n".join(summary_rows),
+    }
 
 
 # ===================================================================

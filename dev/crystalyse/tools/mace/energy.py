@@ -167,6 +167,7 @@ def atoms_to_dict(atoms: Any) -> dict:
         "positions": atoms.positions.tolist(),
         "cell": atoms.cell.tolist(),
         "pbc": atoms.pbc.tolist(),
+        "formula": atoms.get_chemical_formula(),
     }
 
 

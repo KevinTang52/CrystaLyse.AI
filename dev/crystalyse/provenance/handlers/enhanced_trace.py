@@ -318,8 +318,18 @@ class ProvenanceTraceHandler(ToolTraceHandler):
             output_data = raw if isinstance(raw, dict) else {}
 
             if isinstance(output_data, dict):
+                # 0. Check for analyze_top_structures combined output
+                if "n_analyzed" in output_data and "results" in output_data:
+                    mcp_tool = "analyze_top_structures"
+                    # Save EOS data for each rank from the combined results
+                    if self.output_dir:
+                        for entry in output_data.get("results", []):
+                            eos = entry.get("eos", {})
+                            rank = entry.get("rank", 0)
+                            if eos and eos.get("b0") is not None:
+                                self._save_eos_data(eos, rank=rank)
                 # 1. Check for Equation of State results (e.g., b0, v0)
-                if "eos_type" in output_data or ("b0" in output_data and "v0" in output_data):
+                elif "eos_type" in output_data or ("b0" in output_data and "v0" in output_data):
                     mcp_tool = "fit_equation_of_state"
                     if self.output_dir and "volumes" in output_data and "energies" in output_data:
                         self._save_eos_data(output_data)
@@ -572,25 +582,28 @@ class ProvenanceTraceHandler(ToolTraceHandler):
         except Exception as e:
             logger.warning(f"Failed to save CIF: {e}")
 
-    def _save_eos_data(self, output_data: dict):
+    def _save_eos_data(self, output_data: dict, rank: int | None = None):
         """Save EOS volumes/energies data to run folder."""
         try:
             eos_data = {
                 "formula": output_data.get("formula"),
                 "eos_type": output_data.get("eos_type"),
-                "v0_ang3": output_data.get("v0"),
-                "e0_eV": output_data.get("e0"),
-                "b0_GPa": output_data.get("b0"),
+                "v0": output_data.get("v0"),
+                "e0": output_data.get("e0"),
+                "b0": output_data.get("b0"),
                 "b0_prime": output_data.get("b0_prime"),
-                "volumes_ang3": output_data.get("volumes"),
-                "energies_eV": output_data.get("energies"),
+                "volumes": output_data.get("volumes"),
+                "energies": output_data.get("energies"),
                 "ev_table": output_data.get("ev_table"),
             }
-            # Find a unique filename so multiple EOS results don't overwrite each other
             formula = output_data.get("formula") or "structure"
-            idx = 1
-            while (self.output_dir / f"eos_rank{idx}_{formula}.json").exists():
-                idx += 1
+            # Use provided rank, or auto-increment to avoid overwriting
+            if rank and rank > 0:
+                idx = rank
+            else:
+                idx = 1
+                while (self.output_dir / f"eos_rank{idx}_{formula}.json").exists():
+                    idx += 1
             eos_file = self.output_dir / f"eos_rank{idx}_{formula}.json"
             with open(eos_file, "w") as f:
                 json.dump(eos_data, f, indent=2)
@@ -967,6 +980,12 @@ class ProvenanceTraceHandler(ToolTraceHandler):
                       if (tc.mcp_tool or tc.wrapper_name) == tool)
             for tool in _stage_tools
         }
+        # Also count relaxations from relax_and_save_all and relax_all_for_ranking
+        for _batch_tool in ("relax_and_save_all", "relax_all_for_ranking"):
+            pipeline["relax_structure"] += sum(
+                len(tc.materials_extracted or []) for tc in self.tool_calls.values()
+                if (tc.mcp_tool or tc.wrapper_name) == _batch_tool
+            )
         # Count generated structures from generate_crystal_csp output directly
         for tc in self.tool_calls.values():
             if (tc.mcp_tool or tc.wrapper_name) == "generate_crystal_csp":

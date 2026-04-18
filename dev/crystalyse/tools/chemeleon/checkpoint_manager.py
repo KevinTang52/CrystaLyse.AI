@@ -133,13 +133,21 @@ def ensure_checkpoints_downloaded(cache_dir: Path = DEFAULT_CACHE_DIR) -> dict[s
     try:
         _download_file(FIGSHARE_URL, tar_file)
 
-        # Extract to cache directory
+        # Extract to a temp location, then move .ckpt files into cache_dir
         logger.info("Extracting checkpoint files...")
-        _extract_tar_gz(
-            tar_file, cache_dir.parent
-        )  # Extracts to parent, creates ckpts/ or chemeleon_checkpoints/
+        extract_tmp = cache_dir.parent / "_ckpt_extract_tmp"
+        extract_tmp.mkdir(parents=True, exist_ok=True)
+        _extract_tar_gz(tar_file, extract_tmp)
 
-        # Clean up tar file
+        # Move all .ckpt files found anywhere in the extraction tree into cache_dir
+        for ckpt_file in extract_tmp.rglob("*.ckpt"):
+            dest = cache_dir / ckpt_file.name
+            ckpt_file.rename(dest)
+            logger.info(f"Moved checkpoint: {ckpt_file.name} -> {dest}")
+
+        # Clean up temp dir and tar file
+        import shutil
+        shutil.rmtree(extract_tmp, ignore_errors=True)
         tar_file.unlink()
         logger.info(f"Checkpoint setup complete: {cache_dir}")
 

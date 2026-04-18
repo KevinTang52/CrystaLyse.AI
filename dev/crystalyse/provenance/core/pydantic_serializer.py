@@ -276,14 +276,16 @@ def _categorize_tool(tool_name: str) -> str:
         # Check standard success flags and scientific indicators
         record["successful"] = (
             actual_data.get("success", False) or
-            actual_data.get("valid", False) or 
-            actual_data.get("converged", False) or          # For relaxation
-            actual_data.get("is_valid", False) or           # For validation
-            actual_data.get("formation_energy") is not None or # For energy
-            actual_data.get("b0") is not None or            # For EOS
-            actual_data.get("space_group_symbol") is not None # For space group
+            actual_data.get("valid", False) or
+            actual_data.get("converged", False) or
+            actual_data.get("is_valid", False) or
+            actual_data.get("formation_energy") is not None or
+            actual_data.get("b0") is not None or
+            actual_data.get("space_group_symbol") is not None or
+            actual_data.get("relaxed") is not None or
+            actual_data.get("saved", 0) > 0
         )
-        
+
         # Extract key data for easier reading (optional but recommended)
         if "formula" in actual_data:
             record["key_data"]["formula"] = actual_data["formula"]
@@ -322,14 +324,18 @@ def create_enhanced_material_record(tool_name: str, tool_output: Any, timestamp:
         # Check standard success flags and scientific indicators
         record["successful"] = (
             actual_data.get("success", False) or
-            actual_data.get("valid", False) or 
+            actual_data.get("valid", False) or
             actual_data.get("converged", False) or          # For relaxation
             actual_data.get("is_valid", False) or           # For validation
             actual_data.get("formation_energy") is not None or # For energy
             actual_data.get("b0") is not None or            # For EOS
-            actual_data.get("space_group_symbol") is not None # For space group
+            actual_data.get("space_group_symbol") is not None or # For space group
+            actual_data.get("relaxed") is not None or                          # relax_all_for_ranking old format
+            (actual_data.get("top_structures") is not None and len(actual_data.get("top_structures", [])) > 0) or  # relax_all_for_ranking new format (non-empty)
+            actual_data.get("saved", 0) > 0 or                                # For relax_and_save_all
+            (actual_data.get("n_analyzed", 0) > 0 and actual_data.get("results") is not None)  # For analyze_top_structures
         )
-        
+
         # # --- NEW NORMALIZATION LOGIC ---
         # # Extract and Normalize Key Scientific Data
         # # We explicitly look for these fields to populate the summary 'key_data'

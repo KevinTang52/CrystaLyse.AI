@@ -105,19 +105,21 @@ class MaterialsTracker:
         Normalize composition to standard chemical notation (Hill).
         Uses pymatgen if available, otherwise falls back to alphabetical.
         """
+        import re
+        # Strip rank qualifier added by _extract_from_analyze_top_structures
+        # e.g. "Ca4Ti4O12_rank1" -> "Ca4Ti4O12"
+        clean = re.sub(r"_rank\d+$", "", composition)
         try:
             from pymatgen.core import Composition
             # This ensures 'SiC' stays 'SiC' instead of becoming 'CSi'
-            return Composition(composition).reduced_formula
+            return Composition(clean).reduced_formula
         except ImportError:
             # Fallback for environments without pymatgen
-            import re
             elements = {}
             pattern = r"([A-Z][a-z]?)(\d*)"
-            for element, count in re.findall(pattern, composition):
+            for element, count in re.findall(pattern, clean):
                 count = int(count) if count else 1
                 elements[element] = elements.get(element, 0) + count
-            
             return "".join(f"{k}{v if v>1 else ''}" for k, v in sorted(elements.items()))
 
 
@@ -168,6 +170,12 @@ class MaterialsTracker:
                 materials = self._extract_from_phase15_stress(data)
             elif tool_name == "relax_structure":
                 materials = self._extract_from_phase15_relaxation(data)
+            elif tool_name == "relax_and_save_all":
+                materials = self._extract_from_relax_and_save_all(data)
+            elif tool_name == "relax_all_for_ranking":
+                materials = self._extract_from_relax_all_for_ranking(data)
+            elif tool_name == "analyze_top_structures":
+                materials = self._extract_from_analyze_top_structures(data)
             elif tool_name == "fit_equation_of_state":
                 materials = self._extract_from_phase15_eos(data)
 
@@ -641,6 +649,69 @@ class MaterialsTracker:
         return materials
 
     # 2. REPLACE THE OLD VERSION WITH THIS ONE
+    def _extract_from_relax_all_for_ranking(self, data: dict) -> list[Material]:
+        """Extract from relax_all_for_ranking batch output."""
+        materials = []
+        formula = data.get("formula", "unknown")
+        for entry in data.get("relaxed", []):
+            if not isinstance(entry, dict) or not entry.get("success"):
+                continue
+            energy = entry.get("final_energy")
+            material = Material(
+                composition=formula,
+                formula=formula,
+                formation_energy=energy,
+                method="mace_relaxed",
+                confidence=1.0,
+            )
+            materials.append(material)
+        return materials
+
+    def _extract_from_analyze_top_structures(self, data: dict) -> list[Material]:
+        """Extract EOS results from analyze_top_structures combined output."""
+        materials = []
+        formula = data.get("formula", "unknown")
+        for entry in data.get("results", []):
+            if not isinstance(entry, dict):
+                continue
+            # Skip structural duplicates — they share geometry with a higher-ranked structure
+            if entry.get("is_duplicate"):
+                continue
+            eos = entry.get("eos", {})
+            rank = entry.get("rank", 0)
+            if not eos or not eos.get("b0"):
+                continue
+            sg = entry.get("space_group", {}).get("space_group_symbol", "")
+            # Use rank-qualified key so each rank is tracked as a separate material
+            material = Material(
+                composition=f"{formula}_rank{rank}",
+                formula=formula,
+                bulk_modulus=eos.get("b0"),
+                formation_energy=eos.get("e0"),
+                method=f"mace_eos_rank{rank}_{sg}" if sg else f"mace_eos_rank{rank}",
+                confidence=1.0,
+            )
+            materials.append(material)
+        return materials
+
+    def _extract_from_relax_and_save_all(self, data: dict) -> list[Material]:
+        """Extract from relax_and_save_all batch output."""
+        materials = []
+        formula = data.get("formula", "unknown")
+        for entry in data.get("results", []):
+            if not isinstance(entry, dict) or entry.get("status") != "saved":
+                continue
+            energy = entry.get("final_energy")
+            material = Material(
+                composition=formula,
+                formula=formula,
+                formation_energy=energy,
+                method="mace_relaxed",
+                confidence=1.0,
+            )
+            materials.append(material)
+        return materials
+
     def _extract_from_phase15_eos(self, data: dict) -> list[Material]:
         """Extract from Phase 1.5 EOS fitting."""
         materials = []
